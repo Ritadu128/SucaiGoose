@@ -40,9 +40,20 @@
 - [x] tRPC: generateMaterials 过程（图像生成）
 - [x] tRPC: getGeneration 过程（查询生成记录）
 
+## 视觉重构（v2）
+- [x] 白底大胆排版风格（参考图二）
+- [x] 手绘鹅 AI 生成并 CDN 托管
+- [x] 可拖动物理粘性素材卡片（framer-motion drag + spring）
+- [x] WorkArea 视觉与新风格统一
+- [x] shimmer 骨架屏动画
+
 ## 测试
 - [x] analyzeStyle 单元测试（含 fallback 测试）
 - [x] generateMaterials 单元测试（含数量验证）
 - [x] uploadImage 单元测试
 - [x] getGeneration 单元测试
 - [x] auth.logout 测试（模板自带）
+- [x] 16/16 测试全部通过
+
+## GitHub
+- [ ] 推送代码至 Ritadu128/SucaiGoose
