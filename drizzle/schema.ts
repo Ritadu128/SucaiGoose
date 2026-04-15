@@ -1,17 +1,7 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json } from "drizzle-orm/mysql-core";
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -25,4 +15,33 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+// Stores each generation session (one reference image → one set of materials)
+export const generations = mysqlTable("generations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  referenceImageUrl: text("referenceImageUrl").notNull(),
+  styleAnalysis: json("styleAnalysis"), // StyleAnalysis JSON
+  status: mysqlEnum("status", ["pending", "analyzing", "generating", "done", "error"])
+    .default("pending")
+    .notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Generation = typeof generations.$inferSelect;
+export type InsertGeneration = typeof generations.$inferInsert;
+
+// Each generated material asset
+export const materials = mysqlTable("materials", {
+  id: int("id").autoincrement().primaryKey(),
+  generationId: int("generationId").notNull(),
+  type: mysqlEnum("type", ["main_title", "sub_title", "tip_box", "divider", "decoration"]).notNull(),
+  label: varchar("label", { length: 128 }),
+  imageUrl: text("imageUrl").notNull(),
+  prompt: text("prompt"),
+  sortOrder: int("sortOrder").default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Material = typeof materials.$inferSelect;
+export type InsertMaterial = typeof materials.$inferInsert;
