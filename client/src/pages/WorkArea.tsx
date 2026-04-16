@@ -163,8 +163,13 @@ function StyleCard({ analysis }: { analysis: StyleAnalysis }) {
 // ─── Material Card ─────────────────────────────────────────────────────────
 function MaterialCard({ material, index }: { material: MaterialItem; index: number }) {
   const [downloading, setDownloading] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const handleDownload = async (format: "png" | "jpg") => {
+    if (!material.imageUrl) {
+      toast.error("图片 URL 无效，无法下载");
+      return;
+    }
     setDownloading(true);
     try {
       const response = await fetch(material.imageUrl);
@@ -198,12 +203,26 @@ function MaterialCard({ material, index }: { material: MaterialItem; index: numb
     >
       {/* Image preview */}
       <div style={{ position: "relative", aspectRatio: "16/9", background: "#f5f5f5", overflow: "hidden" }}>
-        <img
-          src={material.imageUrl}
-          alt={material.label}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-          loading="lazy"
-        />
+        {material.imageUrl && !imgError ? (
+          <img
+            src={material.imageUrl}
+            alt={material.label}
+            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div style={{
+            width: "100%", height: "100%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexDirection: "column", gap: "6px",
+          }}>
+            <ImageIcon size={20} color="#ccc" />
+            <span style={{ fontFamily: "var(--font-sans)", fontSize: "10px", color: "#ccc" }}>
+              {imgError ? "图片加载失败" : "暂无图片"}
+            </span>
+          </div>
+        )}
         {/* Hover overlay */}
         <div
           className="group-hover:opacity-100"

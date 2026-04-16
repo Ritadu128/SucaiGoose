@@ -64,6 +64,14 @@
 - [x] 前端：素材卡片逐条出现（不等全部完成再显示）
 - [x] 修复 Home.tsx em dash 语法错误
 
+## Bug 修复 + 页面重组 v4
+- [x] 修复素材卡片图片不显示的 bug（WorkArea.tsx MaterialCard 添加 imgError state + onError 处理 + 空 URL guard）
+- [x] 首页精简为纯 Hero（只保留大标题 + 漂浮图 + 两个按钮）
+- [x] 新建 /generate 生成页（上传 + 分析 + 素材网格）
+- [x] 新建 /examples 示例展示页
+- [x] 更新 App.tsx 路由
+- [ ] 推送代码至 GitHub Ritadu128/SucaiGoose
+
 ## Hero 重构 v3
 - [x] 重新生成手绘鹅（米白身体/橙红嘴脚/深灰柔和线条/稚拙蒱笔感）
 - [x] 上传5张素材示例图至 CDN（漫画格/鹅拼贴/电视眼/胶片纸/蓝色星星）
