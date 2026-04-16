@@ -161,28 +161,35 @@ function FloatStage() {
   );
 }
 
-// ─── Roaming// ─── Minimal Line Goose SVG ────────────────────────────────────────────
-// Keyframe CSS injected once
+// ─── Minimal Line Goose SVG ────────────────────────────────────────────
+// Walking animation: both legs swing forward together in alternating steps
+// Left leg: 0→50% forward, 50→100% back; Right leg: 0→50% back, 50→100% forward
 const GOOSE_STYLE = `
-@keyframes goose-leg-left {
-  0%   { transform: rotate(-22deg); }
-  50%  { transform: rotate(22deg); }
-  100% { transform: rotate(-22deg); }
+@keyframes goose-leg-L {
+  0%   { transform: rotate(-25deg); }
+  50%  { transform: rotate(25deg); }
+  100% { transform: rotate(-25deg); }
 }
-@keyframes goose-leg-right {
-  0%   { transform: rotate(22deg); }
-  50%  { transform: rotate(-22deg); }
-  100% { transform: rotate(22deg); }
+@keyframes goose-leg-R {
+  0%   { transform: rotate(25deg); }
+  50%  { transform: rotate(-25deg); }
+  100% { transform: rotate(25deg); }
 }
-@keyframes goose-leg-left-fast {
-  0%   { transform: rotate(-32deg); }
-  50%  { transform: rotate(32deg); }
-  100% { transform: rotate(-32deg); }
+@keyframes goose-leg-L-fast {
+  0%   { transform: rotate(-35deg); }
+  50%  { transform: rotate(35deg); }
+  100% { transform: rotate(-35deg); }
 }
-@keyframes goose-leg-right-fast {
-  0%   { transform: rotate(32deg); }
-  50%  { transform: rotate(-32deg); }
-  100% { transform: rotate(32deg); }
+@keyframes goose-leg-R-fast {
+  0%   { transform: rotate(35deg); }
+  50%  { transform: rotate(-35deg); }
+  100% { transform: rotate(35deg); }
+}
+@keyframes goose-quack-pop {
+  0%   { opacity: 0; transform: scale(0.5) translateY(4px); }
+  20%  { opacity: 1; transform: scale(1.1) translateY(-2px); }
+  80%  { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.8) translateY(-6px); }
 }
 `;
 let _gooseStyleInjected = false;
@@ -194,57 +201,46 @@ function injectGooseStyle() {
   document.head.appendChild(el);
 }
 
-function GooseSvg({ fleeing }: { fleeing: boolean }) {
+function GooseSvg({ fleeing, quacking }: { fleeing: boolean; quacking: boolean }) {
   useEffect(() => { injectGooseStyle(); }, []);
-  const dur = fleeing ? "0.20s" : "0.48s";
-  const leftAnim = fleeing ? "goose-leg-left-fast" : "goose-leg-left";
-  const rightAnim = fleeing ? "goose-leg-right-fast" : "goose-leg-right";
-  // Anatomy (viewBox 60x100):
-  // Head: circle cx=32 cy=12 r=9
-  // Neck: M30 20 Q 26 34 30 44
-  // Body: ellipse cx=34 cy=54 rx=18 ry=13
-  // Legs pivot at body bottom: ~(28,67) and (40,67)
-  // Legs go down to ~y=84, feet extend further
+  const dur = fleeing ? "0.18s" : "0.46s";
   return (
     <svg
       width="60"
-      height="100"
-      viewBox="0 0 60 100"
+      height="90"
+      viewBox="0 0 60 90"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      style={{ display: "block", userSelect: "none" }}
+      style={{ display: "block", userSelect: "none", overflow: "visible" }}
     >
+      {/* Quack bubble — appears above head on click */}
+      {quacking && (
+        <g style={{ animation: "goose-quack-pop 1.2s ease-out forwards" }}>
+          <ellipse cx="44" cy="-14" rx="16" ry="10" fill="white" stroke="#222" strokeWidth="1.6" />
+          <text x="44" y="-10" textAnchor="middle" fontSize="8" fontWeight="700" fill="#222" fontFamily="sans-serif">咕咕咕</text>
+          {/* bubble tail */}
+          <path d="M 36 -6 L 32 2 L 40 -4" fill="white" stroke="#222" strokeWidth="1.4" strokeLinejoin="round" />
+        </g>
+      )}
       {/* Body — ellipse */}
-      <ellipse cx="34" cy="54" rx="18" ry="13" stroke="#222" strokeWidth="2.4" fill="none" />
-      {/* Neck — curved path */}
-      <path d="M 30 43 Q 26 32 30 21" stroke="#222" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+      <ellipse cx="34" cy="52" rx="18" ry="13" stroke="#222" strokeWidth="2.4" fill="none" />
+      {/* Neck — shorter curved path */}
+      <path d="M 30 41 Q 27 34 30 24" stroke="#222" strokeWidth="2.4" strokeLinecap="round" fill="none" />
       {/* Head — circle */}
-      <circle cx="32" cy="13" r="9" stroke="#222" strokeWidth="2.4" fill="none" />
+      <circle cx="32" cy="16" r="9" stroke="#222" strokeWidth="2.4" fill="none" />
       {/* Eye */}
-      <circle cx="36" cy="11" r="1.6" fill="#222" />
+      <circle cx="36" cy="14" r="1.6" fill="#222" />
       {/* Beak — orange-red triangle pointing right */}
-      <path d="M 40 13 L 49 12.5 L 40 16" fill="#E8441A" stroke="#E8441A" strokeWidth="0.4" strokeLinejoin="round" />
-      {/* Left leg — animated, pivot at body bottom-left */}
-      <g
-        style={{
-          transformOrigin: "28px 67px",
-          animation: `${leftAnim} ${dur} ease-in-out infinite`,
-        }}
-      >
-        <line x1="28" y1="67" x2="25" y2="83" stroke="#222" strokeWidth="2.2" strokeLinecap="round" />
-        {/* Foot: two toes */}
-        <path d="M 25 83 L 14 86 M 25 83 L 22 90" stroke="#E8441A" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M 40 16 L 49 15.5 L 40 19" fill="#E8441A" stroke="#E8441A" strokeWidth="0.4" strokeLinejoin="round" />
+      {/* Left leg — pivot at body bottom-left (28,65), swings forward/back */}
+      <g style={{ transformOrigin: "28px 65px", animation: `goose-leg-L${fleeing ? "-fast" : ""} ${dur} ease-in-out infinite` }}>
+        <line x1="28" y1="65" x2="25" y2="80" stroke="#222" strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M 25 80 L 13 83 M 25 80 L 22 88" stroke="#E8441A" strokeWidth="2.2" strokeLinecap="round" />
       </g>
-      {/* Right leg — animated opposite phase */}
-      <g
-        style={{
-          transformOrigin: "40px 67px",
-          animation: `${rightAnim} ${dur} ease-in-out infinite`,
-        }}
-      >
-        <line x1="40" y1="67" x2="43" y2="83" stroke="#222" strokeWidth="2.2" strokeLinecap="round" />
-        {/* Foot: two toes */}
-        <path d="M 43 83 L 54 86 M 43 83 L 46 90" stroke="#E8441A" strokeWidth="2.2" strokeLinecap="round" />
+      {/* Right leg — opposite phase */}
+      <g style={{ transformOrigin: "40px 65px", animation: `goose-leg-R${fleeing ? "-fast" : ""} ${dur} ease-in-out infinite` }}>
+        <line x1="40" y1="65" x2="43" y2="80" stroke="#222" strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M 43 80 L 55 83 M 43 80 L 46 88" stroke="#E8441A" strokeWidth="2.2" strokeLinecap="round" />
       </g>
     </svg>
   );
@@ -264,6 +260,8 @@ function RoamingGoose() {
   const [mode, setMode] = useState<GooseMode>("walk");
   const [bobPhase, setBobPhase] = useState(0);
   const [visible, setVisible] = useState(true);
+  const [quacking, setQuacking] = useState(false);
+  const quackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Idle bob timer
   useEffect(() => {
@@ -312,6 +310,11 @@ function RoamingGoose() {
   }, []);
 
   const handleClick = useCallback(() => {
+    // Show quack bubble
+    if (quackTimerRef.current) clearTimeout(quackTimerRef.current);
+    setQuacking(true);
+    quackTimerRef.current = setTimeout(() => setQuacking(false), 1300);
+    // Also briefly flee after quacking
     if (modeRef.current === "flee") return;
     const angle = Math.random() * Math.PI * 2;
     velRef.current = { x: Math.cos(angle), y: Math.sin(angle) };
@@ -319,24 +322,9 @@ function RoamingGoose() {
     setMode("flee");
     if (fleeTimerRef.current) clearTimeout(fleeTimerRef.current);
     fleeTimerRef.current = setTimeout(() => {
-      setVisible(false);
-      setTimeout(() => {
-        const vw = window.innerWidth;
-        const vh = document.documentElement.scrollHeight;
-        const edge = Math.floor(Math.random() * 4);
-        let nx = 0, ny = 0, vx = 0, vy = 0;
-        if (edge === 0) { nx = Math.random() * vw; ny = 80; vx = (Math.random() - 0.5) * 2; vy = 1; }
-        else if (edge === 1) { nx = vw - 80; ny = Math.random() * vh * 0.5; vx = -1; vy = (Math.random() - 0.5); }
-        else if (edge === 2) { nx = Math.random() * vw; ny = vh - 100; vx = (Math.random() - 0.5) * 2; vy = -1; }
-        else { nx = 80; ny = Math.random() * vh * 0.5 + 80; vx = 1; vy = (Math.random() - 0.5); }
-        posRef.current = { x: nx, y: ny };
-        velRef.current = { x: vx, y: vy };
-        modeRef.current = "walk";
-        setMode("walk");
-        setPos({ x: nx, y: ny });
-        setVisible(true);
-      }, 1800);
-    }, 1200);
+      modeRef.current = "walk";
+      setMode("walk");
+    }, 1500);
   }, []);
 
   const bobY = Math.sin(bobPhase) * (mode === "flee" ? 0 : 2.5);
@@ -367,7 +355,7 @@ function RoamingGoose() {
             opacity: visible ? 1 : 0,
           }}
         >
-          <GooseSvg fleeing={mode === "flee"} />
+          <GooseSvg fleeing={mode === "flee"} quacking={quacking} />
         </div>
       )}
     </div>
