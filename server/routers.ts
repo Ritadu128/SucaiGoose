@@ -91,12 +91,14 @@ CRITICAL RULES — strictly follow all of these:
       `Center must be blank white space. Decorative accents only at the far left or right edges.`,
 
     tip_box:
-      `A simple clean text-box background for body copy in a WeChat article. ` +
+      `A horizontal rectangular text panel background for body copy in a WeChat article. ` +
+      `CRITICAL SHAPE RULE: the canvas must be a wide horizontal rectangle — clearly wider than tall. ` +
+      `Aspect ratio must be 4:3, 3:2, or 16:10 — NEVER square, NEVER portrait orientation. ` +
       `Solid color, semi-transparent, or very light tinted background. ` +
       `Subtle texture allowed: folded-paper grain, tiny dot pattern, or soft linen texture — nothing distracting. ` +
-      `Aspect ratio approximately 2:1 or 3:2. ` +
-      `The entire interior must be blank — no text, no icons, no decorative shapes inside. ` +
-      `A thin border or soft shadow is acceptable. Prioritize readability.`,
+      `The entire interior center area must be a large blank clean space — no text, no icons, no decorative shapes inside. ` +
+      `A thin border or very soft shadow at the edges is acceptable. Prioritize readability. ` +
+      `Think of it as: a horizontal rectangular text panel, clearly wider than tall, with a large clean center area for text overlay, not square.`,
 
     divider:
       `Two horizontal divider line assets on a white background, arranged vertically in the image. ` +
@@ -106,11 +108,13 @@ CRITICAL RULES — strictly follow all of these:
       `Lines should be thin, elegant, and minimal. No text anywhere.`,
 
     decoration:
-      `A small standalone decorative graphic element for WeChat article layout. ` +
-      `Examples: a small heart, star cluster, dot pattern, tiny flower, arrow, or corner ornament. ` +
-      `Near-square aspect ratio. ` +
-      `Should feel like it belongs to the same design system as the other elements. ` +
-      `Transparent or white background. No text or letters of any kind.`,
+      `A standalone decorative sticker element for WeChat article layout. ` +
+      `CRITICAL: this is NOT a frame, NOT a blank-centered layout, NOT a text box. ` +
+      `It must have a complete solid subject filling the element — for example: a heart, a star, a small flower, a tiny animal, an arrow, a decorative patch, or a graphic composition. ` +
+      `Do NOT leave an empty area in the center. Do NOT make a ring or border shape with nothing inside. ` +
+      `The subject should fill the element like a sticker or illustration — solid, complete, visually satisfying. ` +
+      `Near-square aspect ratio. White or transparent background. No text or letters of any kind. ` +
+      `Think of it as: a standalone decorative sticker with a complete subject, not a frame, no blank center, no empty area reserved for text.`,
   };
 
   return `${typeGuides[type] || label}${STRICT_RULES}`;
