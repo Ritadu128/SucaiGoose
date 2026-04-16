@@ -21,7 +21,7 @@ export interface StyleAnalysis {
   primaryColors: string[];        // e.g. ["米白 #F5F0E8", "浅灰蓝 #B8C5D0"]
   styleLabels: string[];          // e.g. ["简约", "杂志感", "奶油感"]
   visualElements: string[];       // e.g. ["圆角框", "细线分割", "小装饰点"]
-  recommendedDirections: string[];// e.g. ["标题框", "提示框", "分割线"]
+  recommendedDirections: string[];// e.g. ["标题框", "文字框", "分割线"]
   overallMood: string;            // e.g. "清新淡雅，带有轻盈的编辑质感"
 }
 
@@ -30,7 +30,7 @@ export interface StyleAnalysis {
 const MATERIAL_PLAN = [
   { type: "main_title" as const,  label: "主标题框", count: 2 },
   { type: "sub_title" as const,   label: "小标题框", count: 2 },
-  { type: "tip_box" as const,     label: "提示框",   count: 2 },
+  { type: "tip_box" as const,     label: "文字框",   count: 2 },
   { type: "divider" as const,     label: "分割线",   count: 2 },
   { type: "decoration" as const,  label: "装饰元素", count: 3 },
 ];
@@ -44,7 +44,7 @@ function buildAnalysisPrompt(): string {
   "primaryColors": ["颜色描述 + 色值，如：米白 #F5F0E8"],  // 2-4 个主色调
   "styleLabels": ["风格标签"],  // 3-5 个，如：简约、杂志感、奶油感、轻拼贴、手账感、复古
   "visualElements": ["视觉元素倾向"],  // 3-5 个，如：圆角框、纸张纹理、细线分割、胶带、小装饰点
-  "recommendedDirections": ["推荐生成方向"],  // 如：标题框、提示框、分割线、装饰元素
+  "recommendedDirections": ["推荐生成方向"],  // 如：标题框、文字框、分割线、装饰元素
   "overallMood": "一句话描述整体氛围"
 }
 
@@ -61,29 +61,59 @@ function buildMaterialPrompt(
   const styleStr = style.styleLabels.join("、");
   const elemStr = style.visualElements.join("、");
 
+  // Shared strict rule appended to every prompt
+  const STRICT_RULES = `
+CRITICAL RULES — strictly follow all of these:
+- ABSOLUTELY NO text, letters, words, numbers, Chinese characters, or symbols of any kind anywhere in the image — not even decorative lettering, watermarks, or placeholder text
+- The central area must be completely blank / empty white space so the user can overlay their own text
+- This is a background template tile, NOT a finished design — keep it minimal and unobtrusive
+- Style: ${styleStr}
+- Color palette: ${colorStr}
+- Visual elements: ${elemStr}
+- Overall mood: ${style.overallMood}
+- Variant ${index + 1}: subtly different composition from other variants of the same type
+- High quality, ready to use as a WeChat article layout background`;
+
   const typeGuides: Record<string, string> = {
-    main_title: `公众号主标题框素材，宽横幅设计，突出标题文字区域，留有文字占位空间，尺寸比例约 4:1 或 3:1`,
-    sub_title: `公众号小标题框素材，较窄横幅，适合段落小标题，尺寸比例约 3:1`,
-    tip_box: `公众号提示框/引用框素材，带有边框或背景色块，适合放置提示文字，尺寸比例约 2:1`,
-    divider: `公众号分割线素材，细长横向装饰线条，可带有装饰元素，尺寸比例约 8:1 或 10:1`,
-    decoration: `公众号装饰元素素材，小型独立装饰图形，如角标、小图标、装饰点，接近正方形`,
+    main_title:
+      `A wide horizontal banner background for a WeChat article main title. ` +
+      `Collage-style or paper-cut color block aesthetic. ` +
+      `Aspect ratio approximately 4:1 or 3:1. ` +
+      `The center must be a large blank white or near-white area — no text, no shapes in the center. ` +
+      `Decorative elements (torn paper edges, color blocks, subtle texture) only at the edges or corners. ` +
+      `Feels like a designer's scrapbook background tile.`,
+
+    sub_title:
+      `A narrow horizontal banner background for a WeChat article section subtitle. ` +
+      `Same collage / paper-cut style as the main title but smaller, narrower, more compact. ` +
+      `Aspect ratio approximately 5:1 or 6:1. ` +
+      `More understated and quieter than the main title. ` +
+      `Center must be blank white space. Decorative accents only at the far left or right edges.`,
+
+    tip_box:
+      `A simple clean text-box background for body copy in a WeChat article. ` +
+      `Solid color, semi-transparent, or very light tinted background. ` +
+      `Subtle texture allowed: folded-paper grain, tiny dot pattern, or soft linen texture — nothing distracting. ` +
+      `Aspect ratio approximately 2:1 or 3:2. ` +
+      `The entire interior must be blank — no text, no icons, no decorative shapes inside. ` +
+      `A thin border or soft shadow is acceptable. Prioritize readability.`,
+
+    divider:
+      `Two horizontal divider line assets on a white background, arranged vertically in the image. ` +
+      `Top divider: a single long thin horizontal line spanning nearly the full width, clean and simple. ` +
+      `Bottom divider: a shorter decorative line — for example two short dashes flanking a tiny heart or small diamond in the center. ` +
+      `Aspect ratio of the whole image approximately 8:1 or 10:1. ` +
+      `Lines should be thin, elegant, and minimal. No text anywhere.`,
+
+    decoration:
+      `A small standalone decorative graphic element for WeChat article layout. ` +
+      `Examples: a small heart, star cluster, dot pattern, tiny flower, arrow, or corner ornament. ` +
+      `Near-square aspect ratio. ` +
+      `Should feel like it belongs to the same design system as the other elements. ` +
+      `Transparent or white background. No text or letters of any kind.`,
   };
 
-  return `Create a ${label} graphic element for WeChat Official Account (公众号) layout.
-
-Style: ${styleStr}
-Color palette: ${colorStr}
-Visual elements: ${elemStr}
-Overall mood: ${style.overallMood}
-
-Design requirements:
-- ${typeGuides[type] || label}
-- Pure graphic element, NO real text content, use placeholder lines or shapes for text areas
-- Clean white or transparent-friendly background
-- Flat design, minimal and editorial aesthetic
-- Variant ${index + 1}: slightly different composition from other variants
-- High quality, ready to use in WeChat article layout
-- Soft, clean, modern editorial style`;
+  return `${typeGuides[type] || label}${STRICT_RULES}`;
 }
 
 // ─── Router ────────────────────────────────────────────────────────────────
@@ -180,7 +210,7 @@ export const appRouter = router({
             primaryColors: ["米白 #F5F0E8", "浅灰蓝 #B8C5D0", "暖沙色 #D4C4A8"],
             styleLabels: ["简约", "杂志感", "奶油感"],
             visualElements: ["圆角框", "细线分割", "小装饰点"],
-            recommendedDirections: ["标题框", "提示框", "分割线", "装饰元素"],
+            recommendedDirections: ["标题框", "文字框", "分割线", "装饰元素"],
             overallMood: "清新淡雅，带有轻盈的编辑质感",
           };
         }
