@@ -161,7 +161,96 @@ function FloatStage() {
   );
 }
 
-// ─── Roaming Goose ───────────────────────────────────────────────────────────
+// ─── Roaming// ─── Minimal Line Goose SVG ────────────────────────────────────────────
+// Keyframe CSS injected once
+const GOOSE_STYLE = `
+@keyframes goose-leg-left {
+  0%   { transform: rotate(-22deg); }
+  50%  { transform: rotate(22deg); }
+  100% { transform: rotate(-22deg); }
+}
+@keyframes goose-leg-right {
+  0%   { transform: rotate(22deg); }
+  50%  { transform: rotate(-22deg); }
+  100% { transform: rotate(22deg); }
+}
+@keyframes goose-leg-left-fast {
+  0%   { transform: rotate(-32deg); }
+  50%  { transform: rotate(32deg); }
+  100% { transform: rotate(-32deg); }
+}
+@keyframes goose-leg-right-fast {
+  0%   { transform: rotate(32deg); }
+  50%  { transform: rotate(-32deg); }
+  100% { transform: rotate(32deg); }
+}
+`;
+let _gooseStyleInjected = false;
+function injectGooseStyle() {
+  if (_gooseStyleInjected) return;
+  _gooseStyleInjected = true;
+  const el = document.createElement("style");
+  el.textContent = GOOSE_STYLE;
+  document.head.appendChild(el);
+}
+
+function GooseSvg({ fleeing }: { fleeing: boolean }) {
+  useEffect(() => { injectGooseStyle(); }, []);
+  const dur = fleeing ? "0.20s" : "0.48s";
+  const leftAnim = fleeing ? "goose-leg-left-fast" : "goose-leg-left";
+  const rightAnim = fleeing ? "goose-leg-right-fast" : "goose-leg-right";
+  // Anatomy (viewBox 60x100):
+  // Head: circle cx=32 cy=12 r=9
+  // Neck: M30 20 Q 26 34 30 44
+  // Body: ellipse cx=34 cy=54 rx=18 ry=13
+  // Legs pivot at body bottom: ~(28,67) and (40,67)
+  // Legs go down to ~y=84, feet extend further
+  return (
+    <svg
+      width="60"
+      height="100"
+      viewBox="0 0 60 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: "block", userSelect: "none" }}
+    >
+      {/* Body — ellipse */}
+      <ellipse cx="34" cy="54" rx="18" ry="13" stroke="#222" strokeWidth="2.4" fill="none" />
+      {/* Neck — curved path */}
+      <path d="M 30 43 Q 26 32 30 21" stroke="#222" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+      {/* Head — circle */}
+      <circle cx="32" cy="13" r="9" stroke="#222" strokeWidth="2.4" fill="none" />
+      {/* Eye */}
+      <circle cx="36" cy="11" r="1.6" fill="#222" />
+      {/* Beak — orange-red triangle pointing right */}
+      <path d="M 40 13 L 49 12.5 L 40 16" fill="#E8441A" stroke="#E8441A" strokeWidth="0.4" strokeLinejoin="round" />
+      {/* Left leg — animated, pivot at body bottom-left */}
+      <g
+        style={{
+          transformOrigin: "28px 67px",
+          animation: `${leftAnim} ${dur} ease-in-out infinite`,
+        }}
+      >
+        <line x1="28" y1="67" x2="25" y2="83" stroke="#222" strokeWidth="2.2" strokeLinecap="round" />
+        {/* Foot: two toes */}
+        <path d="M 25 83 L 14 86 M 25 83 L 22 90" stroke="#E8441A" strokeWidth="2.2" strokeLinecap="round" />
+      </g>
+      {/* Right leg — animated opposite phase */}
+      <g
+        style={{
+          transformOrigin: "40px 67px",
+          animation: `${rightAnim} ${dur} ease-in-out infinite`,
+        }}
+      >
+        <line x1="40" y1="67" x2="43" y2="83" stroke="#222" strokeWidth="2.2" strokeLinecap="round" />
+        {/* Foot: two toes */}
+        <path d="M 43 83 L 54 86 M 43 83 L 46 90" stroke="#E8441A" strokeWidth="2.2" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+// ─── Roaming Goose ────────────────────────────────────────────
 type GooseMode = "walk" | "flee" | "return";
 
 function RoamingGoose() {
@@ -188,7 +277,7 @@ function RoamingGoose() {
 
   // Main movement loop
   useEffect(() => {
-    const GOOSE_SIZE = 110;
+    const GOOSE_SIZE = 60;
     const WALK_SPEED = 0.55;
     const FLEE_SPEED = 6.5;
     const loop = () => {
@@ -269,7 +358,7 @@ function RoamingGoose() {
             position: "absolute",
             left: pos.x,
             top: pos.y,
-            width: 110,
+            width: 60,
             pointerEvents: "auto",
             cursor: "pointer",
             transform: `scaleX(${facing === "left" ? -1 : 1}) translateY(${bobY}px) rotate(${bobRotate}deg)`,
@@ -278,12 +367,7 @@ function RoamingGoose() {
             opacity: visible ? 1 : 0,
           }}
         >
-          <img
-            src={GOOSE_IMG}
-            alt="素材鹅"
-            style={{ width: "100%", height: "auto", display: "block", userSelect: "none" }}
-            draggable={false}
-          />
+          <GooseSvg fleeing={mode === "flee"} />
         </div>
       )}
     </div>
