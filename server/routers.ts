@@ -212,27 +212,35 @@ export const appRouter = router({
           }
         }
 
-        // Generate images sequentially to avoid rate limits
+        // Generate images in parallel batches of 3 to balance speed and rate limits
+        const BATCH_SIZE = 3;
         const results: Array<{ type: string; label: string; imageUrl: string; prompt: string }> = [];
-        let sortOrder = 0;
 
-        for (const task of tasks) {
-          const prompt = buildMaterialPrompt(task.type, task.label, task.index, analysis);
-          try {
-            const genResult = await generateImage({ prompt });
-            const url: string = genResult.url ?? "";
-            await createMaterial({
-              generationId,
-              type: task.type,
-              label: `${task.label} ${task.index + 1}`,
-              imageUrl: url,
-              prompt,
-              sortOrder: sortOrder++,
-            });
-            results.push({ type: task.type as string, label: `${task.label} ${task.index + 1}`, imageUrl: url as string, prompt });
-          } catch (err) {
-            console.error(`[generateMaterials] Failed for ${task.label} ${task.index + 1}:`, err);
-            // Continue with other materials even if one fails
+        for (let batchStart = 0; batchStart < tasks.length; batchStart += BATCH_SIZE) {
+          const batch = tasks.slice(batchStart, batchStart + BATCH_SIZE);
+          const batchResults = await Promise.allSettled(
+            batch.map(async (task, batchIdx) => {
+              const sortOrder = batchStart + batchIdx;
+              const prompt = buildMaterialPrompt(task.type, task.label, task.index, analysis);
+              const genResult = await generateImage({ prompt });
+              const url: string = genResult.url ?? "";
+              await createMaterial({
+                generationId,
+                type: task.type,
+                label: `${task.label} ${task.index + 1}`,
+                imageUrl: url,
+                prompt,
+                sortOrder,
+              });
+              return { type: task.type as string, label: `${task.label} ${task.index + 1}`, imageUrl: url, prompt };
+            })
+          );
+          for (const r of batchResults) {
+            if (r.status === "fulfilled") {
+              results.push(r.value);
+            } else {
+              console.error(`[generateMaterials] Batch item failed:`, r.reason);
+            }
           }
         }
 

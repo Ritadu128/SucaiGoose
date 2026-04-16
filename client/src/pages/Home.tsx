@@ -515,7 +515,7 @@ export default function Home() {
 
   return (
     <div style={{ background: "#fff", minHeight: "100vh", overflowX: "hidden" }}>
-      {/* Roaming goose — always on top, full page */}
+      {/* Roaming goose - always on top, full page */}
       <RoamingGoose />
 
       <Nav onScrollToWork={scrollToWork} onScrollToExample={scrollToExample} />
@@ -532,7 +532,7 @@ export default function Home() {
         position: "relative",
         overflow: "hidden",
       }}>
-        {/* Main headline — very minimal */}
+        {/* Main headline - very minimal */}
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
@@ -680,7 +680,7 @@ export default function Home() {
           num="01"
           icon={<Upload size={15} color="#fff" />}
           title="上传参考图"
-          desc="任何你觉得好看的图片都可以——截图、海报、杂志页面、小红书截图。"
+          desc="任何你觉得好看的图片都可以--截图、海报、杂志页面、小红书截图。"
         />
         <StepRow
           num="02"

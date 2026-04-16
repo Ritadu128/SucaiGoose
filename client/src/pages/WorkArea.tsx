@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, Sparkles, Download, X, Archive, ImageIcon, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -23,6 +23,8 @@ interface MaterialItem {
 }
 
 type Stage = "upload" | "analyzing" | "analyzed" | "generating" | "done" | "error";
+
+const TOTAL_MATERIALS = 11;
 
 // ─── Color swatch parser ───────────────────────────────────────────────────
 function parseColorEntry(entry: string): { name: string; hex: string } {
@@ -182,9 +184,9 @@ function MaterialCard({ material, index }: { material: MaterialItem; index: numb
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95, y: 12 }}
+      initial={{ opacity: 0, scale: 0.92, y: 16 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
+      transition={{ duration: 0.4, delay: index * 0.04, ease: [0.22, 1, 0.36, 1] }}
       style={{
         background: "#fff",
         border: "1px solid rgba(0,0,0,0.08)",
@@ -269,6 +271,19 @@ function MaterialCard({ material, index }: { material: MaterialItem; index: numb
   );
 }
 
+// ─── Skeleton card ─────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div style={{
+      aspectRatio: "16/9",
+      borderRadius: "8px",
+      background: "linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%)",
+      backgroundSize: "200% 100%",
+      animation: "shimmer 1.5s infinite",
+    }} />
+  );
+}
+
 // ─── Progress step indicator ───────────────────────────────────────────────
 function ProgressStep({
   step,
@@ -317,6 +332,8 @@ export default function WorkArea() {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [batchDownloading, setBatchDownloading] = useState(false);
+  const [generatingCount, setGeneratingCount] = useState(0);
+  const stageRef = useRef<Stage>("upload");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -324,6 +341,38 @@ export default function WorkArea() {
   const uploadMutation = trpc.materials.uploadImage.useMutation();
   const analyzeMutation = trpc.materials.analyzeStyle.useMutation();
   const generateMutation = trpc.materials.generateMaterials.useMutation();
+
+  // tRPC query for polling during generation
+  const pollQuery = trpc.materials.getGeneration.useQuery(
+    { generationId: generationId ?? 0 },
+    {
+      enabled: stage === "generating" && generationId !== null,
+      refetchInterval: 2500,
+      refetchIntervalInBackground: false,
+      staleTime: 0,
+    }
+  );
+
+  // Sync polled materials into state while generating
+  useEffect(() => {
+    if (stageRef.current !== "generating") return;
+    const polled = pollQuery.data?.materials;
+    if (!polled || polled.length === 0) return;
+
+    const mapped: MaterialItem[] = polled.map((m) => ({
+      type: m.type,
+      label: m.label ?? "",
+      imageUrl: m.imageUrl,
+      prompt: m.prompt ?? "",
+    }));
+    setMaterials(mapped);
+    setGeneratingCount(mapped.length);
+  }, [pollQuery.data]);
+
+  // Keep stageRef in sync
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
 
   // ─── File processing ─────────────────────────────────────────────────────
   const processFile = useCallback(async (file: File) => {
@@ -341,6 +390,7 @@ export default function WorkArea() {
     setStage("analyzing");
     setAnalysis(null);
     setMaterials([]);
+    setGeneratingCount(0);
 
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -397,14 +447,24 @@ export default function WorkArea() {
   const handleGenerate = async () => {
     if (!generationId || !analysis) return;
     setStage("generating");
+    setMaterials([]);
+    setGeneratingCount(0);
     try {
       const result = await generateMutation.mutateAsync({
         generationId,
         analysis,
       });
-      setMaterials(result.materials);
+      // Final sync: use the definitive result from mutation
+      const mapped: MaterialItem[] = result.materials.map((m) => ({
+        type: m.type,
+        label: m.label ?? "",
+        imageUrl: m.imageUrl,
+        prompt: m.prompt ?? "",
+      }));
+      setMaterials(mapped);
+      setGeneratingCount(mapped.length);
       setStage("done");
-      toast.success(`已生成 ${result.materials.length} 个素材！`);
+      toast.success(`已生成 ${mapped.length} 个素材！`);
     } catch (err) {
       console.error(err);
       toast.error("生成失败，请重试");
@@ -447,6 +507,7 @@ export default function WorkArea() {
     setGenerationId(null);
     setAnalysis(null);
     setMaterials([]);
+    setGeneratingCount(0);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -459,6 +520,11 @@ export default function WorkArea() {
     if (current === target) return "active";
     return "pending";
   };
+
+  // How many skeletons to show while generating
+  const skeletonCount = stage === "generating"
+    ? Math.max(0, TOTAL_MATERIALS - materials.length)
+    : 0;
 
   return (
     <section style={{ padding: "80px 24px", background: "#fff", borderTop: "1px solid rgba(0,0,0,0.06)" }}>
@@ -686,31 +752,63 @@ export default function WorkArea() {
                   生成素材包（8–12 个）
                 </button>
                 <p style={{ fontFamily: "var(--font-sans)", fontSize: "11px", color: "#aaa", textAlign: "center", marginTop: "8px" }}>
-                  预计需要 30–60 秒
+                  预计需要 20–60 秒，素材将逐批出现
                 </p>
               </motion.div>
             )}
 
+            {/* Generating progress */}
             {stage === "generating" && (
-              <div style={{
-                background: "#fff",
-                border: "1px solid rgba(0,0,0,0.08)",
-                borderRadius: "12px",
-                padding: "16px",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              }}>
-                <Loader2 size={16} className="animate-spin" color="#E8441A" style={{ flexShrink: 0 }} />
-                <div>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: "#111", margin: "0 0 2px" }}>
-                    正在生成素材…
-                  </p>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "11px", color: "#aaa", margin: 0 }}>
-                    AI 正在生成主标题框、提示框、分割线等素材
-                  </p>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                style={{
+                  background: "#fff",
+                  border: "1px solid rgba(0,0,0,0.08)",
+                  borderRadius: "12px",
+                  padding: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <Loader2 size={15} className="animate-spin" color="#E8441A" style={{ flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: "#111", margin: "0 0 2px" }}>
+                      正在生成素材…
+                    </p>
+                    <p style={{ fontFamily: "var(--font-sans)", fontSize: "11px", color: "#aaa", margin: 0 }}>
+                      已完成 {generatingCount} / {TOTAL_MATERIALS} 个
+                    </p>
+                  </div>
+                  <span style={{
+                    fontFamily: "var(--font-sans)",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    color: "#E8441A",
+                  }}>
+                    {Math.round((generatingCount / TOTAL_MATERIALS) * 100)}%
+                  </span>
                 </div>
-              </div>
+                {/* Progress bar */}
+                <div style={{
+                  height: "3px",
+                  background: "#f0f0f0",
+                  borderRadius: "100px",
+                  overflow: "hidden",
+                }}>
+                  <motion.div
+                    animate={{ width: `${Math.max(5, (generatingCount / TOTAL_MATERIALS) * 100)}%` }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    style={{
+                      height: "100%",
+                      background: "#E8441A",
+                      borderRadius: "100px",
+                    }}
+                  />
+                </div>
+              </motion.div>
             )}
           </div>
 
@@ -737,75 +835,82 @@ export default function WorkArea() {
               </div>
             )}
 
-            {(stage === "analyzing" || stage === "analyzed" || stage === "generating") && materials.length === 0 && (
+            {/* Analyzing: show full skeleton grid */}
+            {(stage === "analyzing" || stage === "analyzed") && materials.length === 0 && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
                 {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} style={{
-                    aspectRatio: "16/9",
-                    borderRadius: "8px",
-                    background: "linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%)",
-                    backgroundSize: "200% 100%",
-                    animation: "shimmer 1.5s infinite",
-                  }} />
+                  <SkeletonCard key={i} />
                 ))}
               </div>
             )}
 
-            {materials.length > 0 && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* Generating or done: show real cards + remaining skeletons */}
+            {(stage === "generating" || stage === "done") && (
+              <div>
                 {/* Batch download bar */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: "#111", margin: 0 }}>
-                    已生成 {materials.length} 个素材
-                  </p>
-                  <button
-                    onClick={handleBatchDownload}
-                    disabled={batchDownloading}
-                    style={{
-                      display: "flex", alignItems: "center", gap: "6px",
-                      padding: "8px 16px",
-                      borderRadius: "100px",
-                      background: "#fff",
-                      color: "#111",
-                      border: "1.5px solid #111",
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      transition: "all 0.2s",
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "#111"; e.currentTarget.style.color = "#fff"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = "#111"; }}
-                  >
-                    {batchDownloading ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <Archive size={12} />
+                {materials.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+                    <p style={{ fontFamily: "var(--font-sans)", fontSize: "13px", fontWeight: 600, color: "#111", margin: 0 }}>
+                      {stage === "done"
+                        ? `已生成 ${materials.length} 个素材`
+                        : `已生成 ${materials.length} 个，生成中…`}
+                    </p>
+                    {stage === "done" && (
+                      <button
+                        onClick={handleBatchDownload}
+                        disabled={batchDownloading}
+                        style={{
+                          display: "flex", alignItems: "center", gap: "6px",
+                          padding: "8px 16px",
+                          borderRadius: "100px",
+                          background: "#fff",
+                          color: "#111",
+                          border: "1.5px solid #111",
+                          fontFamily: "var(--font-sans)",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "#111"; e.currentTarget.style.color = "#fff"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = "#111"; }}
+                      >
+                        {batchDownloading ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Archive size={12} />
+                        )}
+                        一键打包下载 ZIP
+                      </button>
                     )}
-                    一键打包下载 ZIP
-                  </button>
-                </div>
+                  </div>
+                )}
 
-                {/* Materials grid */}
+                {/* Mixed grid: real cards + skeletons */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
                   {materials.map((mat, i) => (
-                    <MaterialCard key={i} material={mat} index={i} />
+                    <MaterialCard key={`mat-${i}`} material={mat} index={i} />
+                  ))}
+                  {Array.from({ length: skeletonCount }).map((_, i) => (
+                    <SkeletonCard key={`skel-${i}`} />
                   ))}
                 </div>
 
-                {/* Usage hint */}
-                <div style={{
-                  marginTop: "20px",
-                  padding: "14px 16px",
-                  borderRadius: "10px",
-                  background: "#f9f9f9",
-                  border: "1px solid rgba(0,0,0,0.06)",
-                }}>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "#666", lineHeight: 1.7, margin: 0 }}>
-                    <strong>下一步：</strong>将下载的素材导入 Canva、秀米、135 编辑器等工具，直接用于公众号排版。透明背景素材推荐使用 PNG 格式。
-                  </p>
-                </div>
-              </motion.div>
+                {/* Usage hint (only when done) */}
+                {stage === "done" && (
+                  <div style={{
+                    marginTop: "20px",
+                    padding: "14px 16px",
+                    borderRadius: "10px",
+                    background: "#f9f9f9",
+                    border: "1px solid rgba(0,0,0,0.06)",
+                  }}>
+                    <p style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "#666", lineHeight: 1.7, margin: 0 }}>
+                      <strong>下一步：</strong>将下载的素材导入 Canva、秀米、135 编辑器等工具，直接用于公众号排版。透明背景素材推荐使用 PNG 格式。
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
