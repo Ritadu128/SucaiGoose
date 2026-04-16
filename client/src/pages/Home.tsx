@@ -1,216 +1,176 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
-import { Upload, Sparkles, Download, ArrowRight } from "lucide-react";
+import { motion, useMotionValue, useSpring, useTransform, AnimatePresence, animate } from "framer-motion";
+import { Upload, Sparkles, Download } from "lucide-react";
 import WorkArea from "./WorkArea";
 
-// ─── Constants ─────────────────────────────────────────────────────────────
+// ─── CDN Assets ──────────────────────────────────────────────────────────────
 
-const GOOSE_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663370025872/5mKWtQvx6AWCKgfHBWaSbd/goose-hero_a2db9d0e.png";
+const GOOSE_IMG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663370025872/5mKWtQvx6AWCKgfHBWaSbd/goose-v3_9ba08e6a.png";
 
-// Mock draggable material cards for the hero section
-const HERO_CARDS: CardDef[] = [
+// Floating material images for Hero section
+const FLOAT_IMGS = [
   {
-    id: "c1",
-    label: "主标题框",
-    bg: "#111",
-    fg: "#fff",
+    id: "f1",
+    src: "https://d2xsxph8kpxj0f.cloudfront.net/310519663370025872/5mKWtQvx6AWCKgfHBWaSbd/material-manga_27c66639.jpg",
+    alt: "漫画格素材",
     rotate: -8,
-    x: -280,
+    x: -380,
+    y: -30,
+    w: 185,
+    zIndex: 12,
+  },
+  {
+    id: "f2",
+    src: "https://d2xsxph8kpxj0f.cloudfront.net/310519663370025872/5mKWtQvx6AWCKgfHBWaSbd/material-goose-poster_e554e693.jpg",
+    alt: "鹅拼贴海报",
+    rotate: 5,
+    x: -160,
     y: 20,
-    w: 200,
-    h: 64,
-    type: "title",
+    w: 210,
+    zIndex: 14,
   },
   {
-    id: "c2",
-    label: "小标题框",
-    bg: "#F5C842",
-    fg: "#111",
-    rotate: 4,
-    x: -80,
-    y: -10,
-    w: 180,
-    h: 52,
-    type: "subtitle",
+    id: "f3",
+    src: "https://d2xsxph8kpxj0f.cloudfront.net/310519663370025872/5mKWtQvx6AWCKgfHBWaSbd/material-tv-eye_92080f88.png",
+    alt: "电视眼素材",
+    rotate: -4,
+    x: 60,
+    y: -50,
+    w: 175,
+    zIndex: 13,
   },
   {
-    id: "c3",
-    label: "提示框",
-    bg: "#E8441A",
-    fg: "#fff",
-    rotate: -3,
-    x: 100,
-    y: 30,
-    w: 160,
-    h: 80,
-    type: "tip",
-  },
-  {
-    id: "c4",
-    label: "分割线",
-    bg: "#fff",
-    fg: "#111",
-    rotate: 6,
-    x: 260,
-    y: -15,
-    w: 140,
-    h: 44,
-    type: "divider",
-    border: "#111",
-  },
-  {
-    id: "c5",
-    label: "装饰元素",
-    bg: "#B5D5F5",
-    fg: "#111",
-    rotate: -5,
-    x: -180,
-    y: 90,
-    w: 90,
-    h: 90,
-    type: "decoration",
-    round: true,
-  },
-  {
-    id: "c6",
-    label: "装饰元素",
-    bg: "#C8F0C0",
-    fg: "#111",
+    id: "f4",
+    src: "https://d2xsxph8kpxj0f.cloudfront.net/310519663370025872/5mKWtQvx6AWCKgfHBWaSbd/material-film_6c814916.png",
+    alt: "胶片纸素材",
     rotate: 9,
-    x: 380,
-    y: 50,
-    w: 80,
-    h: 80,
-    type: "decoration",
-    round: true,
+    x: 240,
+    y: 10,
+    w: 155,
+    zIndex: 11,
+  },
+  {
+    id: "f5",
+    src: "https://d2xsxph8kpxj0f.cloudfront.net/310519663370025872/5mKWtQvx6AWCKgfHBWaSbd/material-blue-stars_e339b32c.png",
+    alt: "蓝色星星素材",
+    rotate: -11,
+    x: 390,
+    y: -20,
+    w: 160,
+    zIndex: 10,
   },
 ];
 
-// ─── Draggable Card ─────────────────────────────────────────────────────────
+// ─── Floating Image Card (draggable, with parallax float) ───────────────────
 
-interface CardDef {
+interface FloatImgDef {
   id: string;
-  label: string;
-  bg: string;
-  fg: string;
+  src: string;
+  alt: string;
   rotate: number;
   x: number;
   y: number;
   w: number;
-  h: number;
-  type: string;
-  border?: string | undefined;
-  round?: boolean | undefined;
+  zIndex: number;
 }
 
-function DraggableCard({ card, zIndex, onDragStart }: {
-  card: CardDef;
+function FloatingImgCard({ img, zIndex, onDragStart }: {
+  img: FloatImgDef;
   zIndex: number;
   onDragStart: (id: string) => void;
 }) {
-  const x = useMotionValue(card.x);
-  const y = useMotionValue(card.y);
-  const springX = useSpring(x, { stiffness: 200, damping: 22 });
-  const springY = useSpring(y, { stiffness: 200, damping: 22 });
+  const x = useMotionValue(img.x);
+  const y = useMotionValue(img.y);
+  const springX = useSpring(x, { stiffness: 180, damping: 24 });
+  const springY = useSpring(y, { stiffness: 180, damping: 24 });
 
-  // Tilt based on drag velocity
   const rotate = useTransform(
     [springX, springY],
-    ([latestX, latestY]) => {
-      const dx = (latestX as number) - card.x;
-      const dy = (latestY as number) - card.y;
-      return card.rotate + dx * 0.015 + dy * 0.008;
+    ([lx, ly]) => {
+      const dx = (lx as number) - img.x;
+      const dy = (ly as number) - img.y;
+      return img.rotate + dx * 0.012 + dy * 0.006;
     }
   );
 
-  const isRound = !!card.round;
-  const borderRadius = isRound ? "50%" : card.type === "divider" ? "4px" : "10px";
+  // Subtle idle float animation
+  useEffect(() => {
+    const floatY = img.y + (Math.random() - 0.5) * 10;
+    const controls = animate(y, [img.y, floatY, img.y], {
+      duration: 3 + Math.random() * 2,
+      repeat: Infinity,
+      ease: "easeInOut",
+      delay: Math.random() * 2,
+    });
+    return controls.stop;
+  }, []);
 
   return (
     <motion.div
       drag
       dragMomentum={false}
-      dragElastic={0.08}
+      dragElastic={0.06}
       style={{
         x: springX,
         y: springY,
         rotate,
         zIndex,
         position: "absolute",
-        width: card.w,
-        height: card.h,
-        background: card.bg,
-        color: card.fg,
-        borderRadius,
-        border: card.border ? `2px solid ${card.border}` : "none",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        boxShadow: "3px 6px 0px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06)",
+        width: img.w,
         cursor: "grab",
         userSelect: "none",
         touchAction: "none",
         willChange: "transform",
+        borderRadius: "6px",
+        overflow: "hidden",
+        boxShadow: "4px 8px 24px rgba(0,0,0,0.18), 0 1px 0 rgba(255,255,255,0.6) inset",
       }}
       whileDrag={{
-        scale: 1.06,
-        boxShadow: "6px 12px 0px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)",
+        scale: 1.04,
+        boxShadow: "8px 16px 40px rgba(0,0,0,0.28)",
         cursor: "grabbing",
         zIndex: 999,
       }}
-      whileHover={{ scale: 1.03 }}
-      onDragStart={() => onDragStart(card.id)}
-      initial={{ opacity: 0, scale: 0.7, rotate: card.rotate - 10 }}
-      animate={{ opacity: 1, scale: 1, rotate: card.rotate }}
-      transition={{ type: "spring", stiffness: 260, damping: 20, delay: HERO_CARDS.indexOf(card) * 0.08 }}
+      whileHover={{ scale: 1.025 }}
+      onDragStart={() => onDragStart(img.id)}
+      initial={{ opacity: 0, scale: 0.85, rotate: img.rotate - 8 }}
+      animate={{ opacity: 1, scale: 1, rotate: img.rotate }}
+      transition={{ type: "spring", stiffness: 240, damping: 22, delay: FLOAT_IMGS.findIndex(f => f.id === img.id) * 0.1 }}
     >
-      {!isRound && card.type !== "divider" && (
-        <span style={{
-          fontSize: "11px",
-          fontWeight: 600,
-          letterSpacing: "0.04em",
-          fontFamily: "var(--font-sans)",
-          opacity: 0.7,
-          padding: "0 12px",
-          textAlign: "center",
-        }}>
-          {card.label}
-        </span>
-      )}
-      {card.type === "divider" && (
-        <div style={{ width: "80%", height: "2px", background: card.fg, opacity: 0.6, borderRadius: "1px" }} />
-      )}
+      <img
+        src={img.src}
+        alt={img.alt}
+        style={{
+          width: "100%",
+          height: "auto",
+          display: "block",
+          pointerEvents: "none",
+        }}
+        draggable={false}
+      />
     </motion.div>
   );
 }
 
-// ─── Cards Stage ────────────────────────────────────────────────────────────
-
-function CardsStage() {
+function FloatStage() {
   const [topCard, setTopCard] = useState<string | null>(null);
-
-  const getZIndex = (id: string) => {
-    if (id === topCard) return 50;
-    return HERO_CARDS.findIndex(c => c.id === id) + 10;
-  };
+  const getZ = (id: string) => id === topCard ? 999 : FLOAT_IMGS.find(f => f.id === id)!.zIndex;
 
   return (
-    <div
-      style={{
-        position: "relative",
-        width: "100%",
-        height: 200,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "visible",
-      }}
-    >
-      {HERO_CARDS.map((card) => (
-        <DraggableCard
-          key={card.id}
-          card={card}
-          zIndex={getZIndex(card.id)}
+    <div style={{
+      position: "relative",
+      width: "100%",
+      height: 300,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "visible",
+    }}>
+      {FLOAT_IMGS.map(img => (
+        <FloatingImgCard
+          key={img.id}
+          img={img}
+          zIndex={getZ(img.id)}
           onDragStart={setTopCard}
         />
       ))}
@@ -218,7 +178,171 @@ function CardsStage() {
   );
 }
 
-// ─── Nav ────────────────────────────────────────────────────────────────────
+// ─── Roaming Goose ───────────────────────────────────────────────────────────
+// Small goose that wanders around the full page, idle bob + click-to-flee
+
+type GooseMode = "walk" | "flee" | "return";
+
+function RoamingGoose() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const posRef = useRef({ x: 120, y: 200 });
+  const velRef = useRef({ x: 0.6, y: 0.3 });
+  const modeRef = useRef<GooseMode>("walk");
+  const fleeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafRef = useRef<number>(0);
+  const [pos, setPos] = useState({ x: 120, y: 200 });
+  const [facing, setFacing] = useState<"left" | "right">("right");
+  const [mode, setMode] = useState<GooseMode>("walk");
+  const [bobPhase, setBobPhase] = useState(0);
+  const [visible, setVisible] = useState(true);
+
+  // Idle bob timer
+  useEffect(() => {
+    let t = 0;
+    const id = setInterval(() => {
+      t += 0.12;
+      setBobPhase(t);
+    }, 50);
+    return () => clearInterval(id);
+  }, []);
+
+  // Main movement loop
+  useEffect(() => {
+    const GOOSE_SIZE = 110;
+    const WALK_SPEED = 0.55;
+    const FLEE_SPEED = 6.5;
+
+    const loop = () => {
+      const vw = window.innerWidth;
+      const vh = document.documentElement.scrollHeight;
+      const p = posRef.current;
+      const v = velRef.current;
+      const currentMode = modeRef.current;
+
+      const speed = currentMode === "flee" ? FLEE_SPEED : WALK_SPEED;
+      const len = Math.sqrt(v.x * v.x + v.y * v.y) || 1;
+      const nx = p.x + (v.x / len) * speed;
+      const ny = p.y + (v.y / len) * speed;
+
+      // Bounce off walls
+      let bx = v.x, by = v.y;
+      if (nx < 20 || nx > vw - GOOSE_SIZE - 20) bx = -bx;
+      if (ny < 60 || ny > vh - GOOSE_SIZE - 20) by = -by;
+
+      // Randomly change direction while walking
+      if (currentMode === "walk" && Math.random() < 0.003) {
+        const angle = Math.random() * Math.PI * 2;
+        bx = Math.cos(angle);
+        by = Math.sin(angle);
+      }
+
+      velRef.current = { x: bx, y: by };
+      posRef.current = {
+        x: Math.max(20, Math.min(vw - GOOSE_SIZE - 20, nx)),
+        y: Math.max(60, Math.min(vh - GOOSE_SIZE - 20, ny)),
+      };
+
+      setPos({ ...posRef.current });
+      setFacing(bx > 0 ? "right" : "left");
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  const handleClick = useCallback(() => {
+    if (modeRef.current === "flee") return;
+
+    // Flee: pick a random off-screen direction
+    const angle = Math.random() * Math.PI * 2;
+    velRef.current = { x: Math.cos(angle), y: Math.sin(angle) };
+    modeRef.current = "flee";
+    setMode("flee");
+
+    // After 1.2s, hide, then reappear from a random edge after 2s
+    if (fleeTimerRef.current) clearTimeout(fleeTimerRef.current);
+    fleeTimerRef.current = setTimeout(() => {
+      setVisible(false);
+      setTimeout(() => {
+        // Reappear from a random edge
+        const vw = window.innerWidth;
+        const vh = document.documentElement.scrollHeight;
+        const edge = Math.floor(Math.random() * 4);
+        let nx = 0, ny = 0, vx = 0, vy = 0;
+        if (edge === 0) { nx = Math.random() * vw; ny = 80; vx = (Math.random() - 0.5) * 2; vy = 1; }
+        else if (edge === 1) { nx = vw - 80; ny = Math.random() * vh * 0.5; vx = -1; vy = (Math.random() - 0.5); }
+        else if (edge === 2) { nx = Math.random() * vw; ny = vh - 100; vx = (Math.random() - 0.5) * 2; vy = -1; }
+        else { nx = 80; ny = Math.random() * vh * 0.5 + 80; vx = 1; vy = (Math.random() - 0.5); }
+
+        posRef.current = { x: nx, y: ny };
+        velRef.current = { x: vx, y: vy };
+        modeRef.current = "walk";
+        setMode("walk");
+        setPos({ x: nx, y: ny });
+        setVisible(true);
+      }, 1800);
+    }, 1200);
+  }, []);
+
+  const bobY = Math.sin(bobPhase) * (mode === "flee" ? 0 : 2.5);
+  const bobRotate = Math.sin(bobPhase * 0.7) * (mode === "flee" ? 3 : 1.2);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 200,
+      }}
+    >
+      <AnimatePresence>
+        {visible && (
+          <motion.div
+            key="goose"
+            initial={{ opacity: 0, scale: 0.6 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.4 }}
+            transition={{ duration: 0.35, type: "spring" }}
+            style={{
+              position: "absolute",
+              left: pos.x,
+              top: pos.y,
+              width: 110,
+              height: 110,
+              pointerEvents: "auto",
+              cursor: "pointer",
+              transform: `scaleX(${facing === "left" ? -1 : 1}) translateY(${bobY}px) rotate(${bobRotate}deg)`,
+              transformOrigin: "center center",
+              willChange: "transform",
+            }}
+            onClick={handleClick}
+            title="点我！"
+          >
+            <img
+              src={GOOSE_IMG}
+              alt="素材鹅"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                display: "block",
+                filter: "drop-shadow(0 3px 6px rgba(0,0,0,0.15))",
+                pointerEvents: "none",
+              }}
+              draggable={false}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Nav ─────────────────────────────────────────────────────────────────────
 
 function Nav({ onScrollToWork, onScrollToExample }: {
   onScrollToWork: () => void;
@@ -232,28 +356,25 @@ function Nav({ onScrollToWork, onScrollToExample }: {
   }, []);
 
   return (
-    <nav
-      style={{
-        position: "fixed",
-        top: 0, left: 0, right: 0,
-        zIndex: 100,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 2rem",
-        height: "56px",
-        background: scrolled ? "rgba(255,255,255,0.92)" : "transparent",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
-        borderBottom: scrolled ? "1px solid rgba(0,0,0,0.08)" : "none",
-        transition: "all 0.3s ease",
-      }}
-    >
-      {/* Logo */}
+    <nav style={{
+      position: "fixed",
+      top: 0, left: 0, right: 0,
+      zIndex: 100,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "0 2.5rem",
+      height: "56px",
+      background: scrolled ? "rgba(255,255,255,0.94)" : "transparent",
+      backdropFilter: scrolled ? "blur(14px)" : "none",
+      borderBottom: scrolled ? "1px solid rgba(0,0,0,0.07)" : "none",
+      transition: "all 0.3s ease",
+    }}>
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
         <GooseLogoSmall />
         <span style={{
           fontFamily: "var(--font-display)",
-          fontSize: "18px",
+          fontSize: "17px",
           fontWeight: 600,
           color: "#111",
           letterSpacing: "-0.02em",
@@ -261,23 +382,22 @@ function Nav({ onScrollToWork, onScrollToExample }: {
           素材鹅
         </span>
       </div>
-
-      {/* Links */}
-      <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
         <button
           onClick={onScrollToExample}
           style={{
             fontFamily: "var(--font-sans)",
             fontSize: "13px",
             fontWeight: 500,
-            color: "#555",
+            color: "#666",
             background: "none",
             border: "none",
             padding: 0,
+            cursor: "pointer",
             transition: "color 0.2s",
           }}
           onMouseEnter={e => (e.currentTarget.style.color = "#111")}
-          onMouseLeave={e => (e.currentTarget.style.color = "#555")}
+          onMouseLeave={e => (e.currentTarget.style.color = "#666")}
         >
           示例
         </button>
@@ -290,21 +410,22 @@ function Nav({ onScrollToWork, onScrollToExample }: {
             color: "#fff",
             background: "#111",
             border: "none",
-            padding: "8px 20px",
+            padding: "8px 18px",
             borderRadius: "100px",
-            transition: "background 0.2s, transform 0.15s",
+            cursor: "pointer",
+            transition: "background 0.2s",
           }}
-      onMouseEnter={e => { e.currentTarget.style.background = "#E8441A"; }}
-        onMouseLeave={e => { e.currentTarget.style.background = "#111"; }}
+          onMouseEnter={e => { e.currentTarget.style.background = "#E8441A"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "#111"; }}
         >
-          开始使用
+          开始生成
         </button>
       </div>
     </nav>
   );
 }
 
-// ─── Step Row ───────────────────────────────────────────────────────────────
+// ─── Step Row ────────────────────────────────────────────────────────────────
 
 function StepRow({ num, icon, title, desc }: {
   num: string;
@@ -314,7 +435,7 @@ function StepRow({ num, icon, title, desc }: {
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, x: -16 }}
       whileInView={{ opacity: 1, x: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
@@ -323,16 +444,16 @@ function StepRow({ num, icon, title, desc }: {
         alignItems: "flex-start",
         gap: "20px",
         padding: "28px 0",
-        borderBottom: "1px solid rgba(0,0,0,0.08)",
+        borderBottom: "1px solid rgba(0,0,0,0.07)",
       }}
     >
       <span style={{
         fontFamily: "var(--font-display)",
-        fontSize: "48px",
+        fontSize: "44px",
         fontWeight: 700,
-        color: "rgba(0,0,0,0.06)",
+        color: "rgba(0,0,0,0.05)",
         lineHeight: 1,
-        minWidth: "56px",
+        minWidth: "52px",
         letterSpacing: "-0.04em",
       }}>
         {num}
@@ -340,9 +461,9 @@ function StepRow({ num, icon, title, desc }: {
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
           <div style={{
-            width: "32px", height: "32px",
+            width: "30px", height: "30px",
             background: "#111",
-            borderRadius: "8px",
+            borderRadius: "7px",
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0,
           }}>
@@ -350,7 +471,7 @@ function StepRow({ num, icon, title, desc }: {
           </div>
           <h3 style={{
             fontFamily: "var(--font-display)",
-            fontSize: "20px",
+            fontSize: "18px",
             fontWeight: 600,
             color: "#111",
             letterSpacing: "-0.02em",
@@ -362,10 +483,10 @@ function StepRow({ num, icon, title, desc }: {
         <p style={{
           fontFamily: "var(--font-sans)",
           fontSize: "14px",
-          color: "#666",
+          color: "#777",
           lineHeight: 1.7,
           margin: 0,
-          paddingLeft: "42px",
+          paddingLeft: "40px",
         }}>
           {desc}
         </p>
@@ -374,32 +495,7 @@ function StepRow({ num, icon, title, desc }: {
   );
 }
 
-/// ─── Mock example materials for the demo section ───────────────────────────
-interface DemoCard {
-  label: string;
-  bg: string;
-  fg: string;
-  w: number | string;
-  h: number;
-  type: string;
-  border?: string;
-  round?: boolean;
-}
-const DEMO_CARDS: DemoCard[] = [
-  { label: "主标题框 1", bg: "#111", fg: "#fff", w: "100%", h: 60, type: "title" },
-  { label: "主标题框 2", bg: "#F5C842", fg: "#111", w: "100%", h: 60, type: "title" },
-  { label: "小标题框 1", bg: "#E8441A", fg: "#fff", w: "75%", h: 44, type: "subtitle" },
-  { label: "小标题框 2", bg: "#fff", fg: "#111", w: "75%", h: 44, type: "subtitle", border: "#111" },
-  { label: "提示框 1", bg: "#f5f5f5", fg: "#111", w: "100%", h: 72, type: "tip", border: "#ddd" },
-  { label: "提示框 2", bg: "#B5D5F5", fg: "#111", w: "100%", h: 72, type: "tip" },
-  { label: "分割线 1", bg: "#111", fg: "#111", w: "100%", h: 2, type: "divider" },
-  { label: "分割线 2", bg: "#E8441A", fg: "#E8441A", w: "60%", h: 2, type: "divider" },
-  { label: "装饰元素 1", bg: "#F5C842", fg: "#111", w: 52, h: 52, type: "decoration", round: true },
-  { label: "装饰元素 2", bg: "#C8F0C0", fg: "#111", w: 52, h: 52, type: "decoration", round: true },
-  { label: "装饰元素 3", bg: "#111", fg: "#fff", w: 52, h: 52, type: "decoration", round: true },
-];
-
-// ─── Main Home ──────────────────────────────────────────────────────────────
+// ─── Main Home ───────────────────────────────────────────────────────────────
 
 export default function Home() {
   const workAreaRef = useRef<HTMLDivElement>(null);
@@ -419,6 +515,9 @@ export default function Home() {
 
   return (
     <div style={{ background: "#fff", minHeight: "100vh", overflowX: "hidden" }}>
+      {/* Roaming goose — always on top, full page */}
+      <RoamingGoose />
+
       <Nav onScrollToWork={scrollToWork} onScrollToExample={scrollToExample} />
 
       {/* ─── HERO ─────────────────────────────────────────────────────────── */}
@@ -428,219 +527,145 @@ export default function Home() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "flex-start",
-        paddingTop: "120px",
-        paddingBottom: 0,
+        paddingTop: "140px",
+        paddingBottom: "60px",
         position: "relative",
         overflow: "hidden",
       }}>
-        {/* Top label */}
+        {/* Main headline — very minimal */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          style={{ marginBottom: "24px" }}
-        >
-          <span style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "11px",
-            fontWeight: 700,
-            letterSpacing: "0.12em",
-            textTransform: "uppercase",
-            color: "#888",
-            background: "#f5f5f5",
-            padding: "6px 14px",
-            borderRadius: "100px",
-          }}>
-            AI 公众号素材生成器
-          </span>
-        </motion.div>
-
-        {/* Main headline */}
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.65, delay: 0.1 }}
-          style={{ textAlign: "center", maxWidth: "780px", padding: "0 24px" }}
+          transition={{ duration: 0.7, delay: 0.05 }}
+          style={{ textAlign: "center", padding: "0 24px", maxWidth: "820px" }}
         >
           <h1 style={{
             fontFamily: "var(--font-display)",
-            fontSize: "clamp(52px, 8vw, 96px)",
+            fontSize: "clamp(48px, 7.5vw, 92px)",
             fontWeight: 700,
             lineHeight: 1.0,
             letterSpacing: "-0.04em",
             color: "#111",
             margin: 0,
           }}>
-            上传参考图，
+            把喜欢的风格
             <br />
-            <span style={{ color: "#E8441A" }}>AI</span> 为你生成
-            <br />
-            一套公众号素材
+            变成你的素材
           </h1>
         </motion.div>
 
-        {/* Subline + CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
+        {/* Subline */}
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.28 }}
+          transition={{ duration: 0.6, delay: 0.22 }}
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "20px",
-            marginTop: "32px",
-            marginBottom: "48px",
-          }}
-        >
-          <p style={{
             fontFamily: "var(--font-sans)",
             fontSize: "16px",
-            color: "#666",
+            color: "#888",
             lineHeight: 1.7,
             textAlign: "center",
-            maxWidth: "480px",
-            margin: 0,
-          }}>
-            不需要自己抠配色，不需要自己做标题框。
-            <br />
-            上传一张喜欢的参考图，AI 帮你拆出一套能直接用的素材。
-          </p>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
-            <button
-              onClick={scrollToWork}
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "15px",
-                fontWeight: 600,
-                color: "#fff",
-                background: "#111",
-                border: "none",
-                padding: "14px 28px",
-                borderRadius: "100px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                transition: "background 0.2s, transform 0.15s",
-                boxShadow: "0 2px 0 rgba(0,0,0,0.15)",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "#E8441A"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "#111"; e.currentTarget.style.transform = "translateY(0)"; }}
-            >
-              <Upload size={16} />
-              上传参考图，开始生成
-            </button>
-            <button
-              onClick={scrollToExample}
-              style={{
-                fontFamily: "var(--font-sans)",
-                fontSize: "15px",
-                fontWeight: 500,
-                color: "#111",
-                background: "transparent",
-                border: "1.5px solid rgba(0,0,0,0.15)",
-                padding: "14px 24px",
-                borderRadius: "100px",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                transition: "border-color 0.2s",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = "#111"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(0,0,0,0.15)"; }}
-            >
-              查看示例
-              <ArrowRight size={14} />
-            </button>
-          </div>
+            maxWidth: "360px",
+            margin: "24px 0 0",
+            padding: "0 24px",
+          }}
+        >
+          上传一张你喜欢的图，剩下的交给鹅。
+        </motion.p>
+
+        {/* CTA buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.36 }}
+          style={{
+            display: "flex",
+            gap: "12px",
+            marginTop: "36px",
+            flexWrap: "wrap",
+            justifyContent: "center",
+          }}
+        >
+          <button
+            onClick={scrollToWork}
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "15px",
+              fontWeight: 600,
+              color: "#fff",
+              background: "#111",
+              border: "none",
+              padding: "13px 28px",
+              borderRadius: "100px",
+              cursor: "pointer",
+              boxShadow: "0 2px 0 rgba(0,0,0,0.14)",
+              transition: "background 0.2s, transform 0.15s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#E8441A"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#111"; e.currentTarget.style.transform = "translateY(0)"; }}
+          >
+            开始生成
+          </button>
+          <button
+            onClick={scrollToExample}
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "15px",
+              fontWeight: 500,
+              color: "#555",
+              background: "transparent",
+              border: "1.5px solid rgba(0,0,0,0.14)",
+              padding: "13px 24px",
+              borderRadius: "100px",
+              cursor: "pointer",
+              transition: "border-color 0.2s, color 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#111"; e.currentTarget.style.color = "#111"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(0,0,0,0.14)"; e.currentTarget.style.color = "#555"; }}
+          >
+            查看示例
+          </button>
         </motion.div>
 
-        {/* ── Cards + Goose stage ──────────────────────────────────────────── */}
-        {/* This is the key visual: cards spread out, goose peeking from bottom */}
+        {/* ── Floating material images ──────────────────────────────────────── */}
         <div style={{
           position: "relative",
           width: "100%",
-          maxWidth: "900px",
-          margin: "0 auto",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
+          maxWidth: "960px",
+          margin: "72px auto 0",
+          padding: "0 24px",
         }}>
-          {/* Drag hint */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2, duration: 0.8 }}
-            style={{
-              fontFamily: "var(--font-sans)",
-              fontSize: "11px",
-              color: "#aaa",
-              letterSpacing: "0.06em",
-              marginBottom: "12px",
-              textTransform: "uppercase",
-              fontWeight: 500,
-            }}
-          >
-            ↕ 拖动这些素材卡片试试
-          </motion.p>
-
-          {/* Cards stage */}
-          <CardsStage />
-
-          {/* Goose image — peeking from bottom, overlapping the cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.5, type: "spring", stiffness: 120, damping: 18 }}
-            style={{
-              position: "relative",
-              zIndex: 5,
-              marginTop: "-40px",
-              width: "min(340px, 55vw)",
-              pointerEvents: "none",
-            }}
-          >
-            <img
-              src={GOOSE_IMG}
-              alt="素材鹅"
-              style={{
-                width: "100%",
-                height: "auto",
-                display: "block",
-                filter: "drop-shadow(0px 8px 24px rgba(0,0,0,0.12))",
-              }}
-            />
-          </motion.div>
+          <FloatStage />
         </div>
       </section>
 
       {/* ─── HOW IT WORKS ─────────────────────────────────────────────────── */}
       <section style={{
-        padding: "100px 24px",
-        maxWidth: "680px",
+        padding: "120px 24px",
+        maxWidth: "640px",
         margin: "0 auto",
       }}>
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          style={{ marginBottom: "48px" }}
+          style={{ marginBottom: "52px" }}
         >
           <span style={{
             fontFamily: "var(--font-sans)",
-            fontSize: "11px",
+            fontSize: "10px",
             fontWeight: 700,
-            letterSpacing: "0.12em",
+            letterSpacing: "0.14em",
             textTransform: "uppercase",
-            color: "#aaa",
+            color: "#bbb",
             display: "block",
-            marginBottom: "12px",
+            marginBottom: "14px",
           }}>
             使用流程
           </span>
           <h2 style={{
             fontFamily: "var(--font-display)",
-            fontSize: "clamp(36px, 5vw, 52px)",
+            fontSize: "clamp(32px, 5vw, 48px)",
             fontWeight: 700,
             color: "#111",
             letterSpacing: "-0.03em",
@@ -653,19 +678,19 @@ export default function Home() {
 
         <StepRow
           num="01"
-          icon={<Upload size={16} color="#fff" />}
+          icon={<Upload size={15} color="#fff" />}
           title="上传参考图"
           desc="任何你觉得好看的图片都可以——截图、海报、杂志页面、小红书截图。"
         />
         <StepRow
           num="02"
-          icon={<Sparkles size={16} color="#fff" />}
+          icon={<Sparkles size={15} color="#fff" />}
           title="AI 分析风格并生成素材"
           desc="AI 自动提取配色、风格标签和视觉元素，生成 8–12 个配套公众号素材。"
         />
         <StepRow
           num="03"
-          icon={<Download size={16} color="#fff" />}
+          icon={<Download size={15} color="#fff" />}
           title="下载后直接排版"
           desc="单个下载或一键打包 ZIP，拿到 Canva、秀米、135 编辑器直接用。"
         />
@@ -676,34 +701,34 @@ export default function Home() {
         ref={exampleRef}
         id="example-section"
         style={{
-          background: "#f9f9f9",
-          padding: "80px 24px",
-          borderTop: "1px solid rgba(0,0,0,0.06)",
-          borderBottom: "1px solid rgba(0,0,0,0.06)",
+          background: "#f8f8f8",
+          padding: "100px 24px",
+          borderTop: "1px solid rgba(0,0,0,0.05)",
+          borderBottom: "1px solid rgba(0,0,0,0.05)",
         }}
       >
-        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+        <div style={{ maxWidth: "960px", margin: "0 auto" }}>
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ marginBottom: "52px", textAlign: "center" }}
+            style={{ marginBottom: "56px", textAlign: "center" }}
           >
             <span style={{
               fontFamily: "var(--font-sans)",
-              fontSize: "11px",
+              fontSize: "10px",
               fontWeight: 700,
-              letterSpacing: "0.12em",
+              letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: "#aaa",
+              color: "#bbb",
               display: "block",
-              marginBottom: "12px",
+              marginBottom: "14px",
             }}>
               示例展示
             </span>
             <h2 style={{
               fontFamily: "var(--font-display)",
-              fontSize: "clamp(32px, 5vw, 48px)",
+              fontSize: "clamp(28px, 4.5vw, 44px)",
               fontWeight: 700,
               color: "#111",
               letterSpacing: "-0.03em",
@@ -716,99 +741,93 @@ export default function Home() {
 
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "24px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: "28px",
             alignItems: "start",
           }}>
             {/* Reference image mock */}
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0 }}
             >
               <p style={{
                 fontFamily: "var(--font-sans)",
-                fontSize: "11px",
+                fontSize: "10px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
-                color: "#aaa",
+                color: "#bbb",
                 marginBottom: "12px",
               }}>
                 参考图
               </p>
               <div style={{
-                background: "linear-gradient(135deg, #f0ece4 0%, #c8d8e8 50%, #e0d4bc 100%)",
-                borderRadius: "12px",
+                borderRadius: "10px",
                 aspectRatio: "3/4",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                overflow: "hidden",
                 border: "1px solid rgba(0,0,0,0.06)",
               }}>
-                <div style={{ textAlign: "center", opacity: 0.4 }}>
-                  <div style={{ fontSize: "32px", marginBottom: "8px" }}>🖼</div>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "#666" }}>
-                    示例参考图
-                  </p>
-                </div>
+                <img
+                  src="https://d2xsxph8kpxj0f.cloudfront.net/310519663370025872/5mKWtQvx6AWCKgfHBWaSbd/material-blue-stars_e339b32c.png"
+                  alt="示例参考图"
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                />
               </div>
             </motion.div>
 
             {/* Style analysis card */}
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
             >
               <p style={{
                 fontFamily: "var(--font-sans)",
-                fontSize: "11px",
+                fontSize: "10px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
-                color: "#aaa",
+                color: "#bbb",
                 marginBottom: "12px",
               }}>
                 风格分析卡片
               </p>
               <div style={{
                 background: "#fff",
-                borderRadius: "12px",
+                borderRadius: "10px",
                 padding: "20px",
-                border: "1px solid rgba(0,0,0,0.08)",
+                border: "1px solid rgba(0,0,0,0.07)",
                 display: "flex",
                 flexDirection: "column",
                 gap: "16px",
               }}>
-                {/* Colors */}
                 <div>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#aaa", marginBottom: "8px" }}>
+                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#bbb", marginBottom: "8px" }}>
                     主色调
                   </p>
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                     {[
-                      { name: "米白", hex: "#F5F0E8" },
-                      { name: "浅灰蓝", hex: "#B8C5D0" },
-                      { name: "暖沙色", hex: "#D4C4A8" },
-                      { name: "深墨绿", hex: "#1a2e1a" },
+                      { name: "深蓝", hex: "#1a2d6e" },
+                      { name: "午夜蓝", hex: "#0d1b4b" },
+                      { name: "纯白", hex: "#f5f5f5" },
+                      { name: "星光银", hex: "#c8d4e8" },
                     ].map(c => (
                       <div key={c.hex} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <div style={{ width: 18, height: 18, borderRadius: "50%", background: c.hex, border: "1px solid rgba(0,0,0,0.1)" }} />
-                        <span style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "#555" }}>{c.name}</span>
+                        <div style={{ width: 16, height: 16, borderRadius: "50%", background: c.hex, border: "1px solid rgba(0,0,0,0.1)", flexShrink: 0 }} />
+                        <span style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "#666" }}>{c.name}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                {/* Tags */}
                 <div>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#aaa", marginBottom: "8px" }}>
+                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#bbb", marginBottom: "8px" }}>
                     风格标签
                   </p>
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                    {["简约", "杂志感", "奶油感", "轻拼贴"].map(t => (
+                    {["蓝调", "版画感", "星空", "手绘线条"].map(t => (
                       <span key={t} style={{
                         fontFamily: "var(--font-sans)",
                         fontSize: "11px",
@@ -824,31 +843,29 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
-                {/* Elements */}
                 <div>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#aaa", marginBottom: "8px" }}>
+                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "10px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#bbb", marginBottom: "8px" }}>
                     视觉元素
                   </p>
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                    {["圆角框", "细线分割", "小装饰点", "纸张纹理"].map(e => (
+                    {["星形装饰", "手绘花卉", "版画网点", "双色块"].map(e => (
                       <span key={e} style={{
                         fontFamily: "var(--font-sans)",
                         fontSize: "11px",
-                        background: "#f5f5f5",
-                        color: "#555",
+                        background: "#f4f4f4",
+                        color: "#666",
                         padding: "3px 10px",
                         borderRadius: "6px",
-                        border: "1px solid rgba(0,0,0,0.06)",
+                        border: "1px solid rgba(0,0,0,0.05)",
                       }}>
                         {e}
                       </span>
                     ))}
                   </div>
                 </div>
-                {/* Mood */}
-                <div style={{ borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: "12px" }}>
-                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "#888", fontStyle: "italic", lineHeight: 1.6 }}>
-                    "清新淡雅，带有轻盈的编辑质感，适合内容型公众号排版使用。"
+                <div style={{ borderTop: "1px solid rgba(0,0,0,0.05)", paddingTop: "12px" }}>
+                  <p style={{ fontFamily: "var(--font-sans)", fontSize: "12px", color: "#999", fontStyle: "italic", lineHeight: 1.6, margin: 0 }}>
+                    "深邃的蓝调版画质感，带有手绘星空的诗意，适合文艺内容型公众号。"
                   </p>
                 </div>
               </div>
@@ -856,82 +873,83 @@ export default function Home() {
 
             {/* Generated materials preview */}
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
             >
               <p style={{
                 fontFamily: "var(--font-sans)",
-                fontSize: "11px",
+                fontSize: "10px",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
-                color: "#aaa",
+                color: "#bbb",
                 marginBottom: "12px",
               }}>
                 生成素材包（示意）
               </p>
               <div style={{
                 background: "#fff",
-                borderRadius: "12px",
+                borderRadius: "10px",
                 padding: "16px",
-                border: "1px solid rgba(0,0,0,0.08)",
+                border: "1px solid rgba(0,0,0,0.07)",
                 display: "flex",
                 flexDirection: "column",
-                gap: "10px",
+                gap: "8px",
               }}>
-                {DEMO_CARDS.filter(c => c.type === "title").map((c, i) => (
+                {/* Title bars */}
+                {[
+                  { bg: "#1a2d6e", label: "主标题框 1", h: 52 },
+                  { bg: "#0d1b4b", label: "主标题框 2", h: 52 },
+                ].map((c, i) => (
                   <div key={i} style={{
                     width: "100%", height: c.h,
                     background: c.bg,
-                    borderRadius: "6px",
-                    border: c.border ? `1.5px solid ${c.border}` : "none",
+                    borderRadius: "5px",
                     display: "flex", alignItems: "center", justifyContent: "center",
                   }}>
-                    <span style={{ fontFamily: "var(--font-sans)", fontSize: "11px", color: c.fg, opacity: 0.5 }}>{c.label}</span>
+                    <span style={{ fontFamily: "var(--font-sans)", fontSize: "10px", color: "rgba(255,255,255,0.45)" }}>{c.label}</span>
                   </div>
                 ))}
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {DEMO_CARDS.filter(c => c.type === "subtitle").map((c, i) => (
+                {/* Subtitle bars */}
+                <div style={{ display: "flex", gap: "6px" }}>
+                  {[
+                    { bg: "#c8d4e8", label: "小标题 1", fg: "#1a2d6e" },
+                    { bg: "#f5f5f5", label: "小标题 2", fg: "#1a2d6e", border: "#c8d4e8" },
+                  ].map((c, i) => (
                     <div key={i} style={{
-                      width: c.w, height: c.h,
+                      flex: 1, height: 38,
                       background: c.bg,
-                      borderRadius: "6px",
+                      borderRadius: "5px",
                       border: c.border ? `1.5px solid ${c.border}` : "none",
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      flex: 1,
                     }}>
-                      <span style={{ fontFamily: "var(--font-sans)", fontSize: "10px", color: c.fg, opacity: 0.5 }}>{c.label}</span>
+                      <span style={{ fontFamily: "var(--font-sans)", fontSize: "10px", color: c.fg, opacity: 0.55 }}>{c.label}</span>
                     </div>
                   ))}
                 </div>
-                {DEMO_CARDS.filter(c => c.type === "tip").slice(0, 1).map((c, i) => (
-                  <div key={i} style={{
-                    width: "100%", height: c.h,
-                    background: c.bg,
-                    borderRadius: "6px",
-                    border: c.border ? `1.5px solid ${c.border}` : "none",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <span style={{ fontFamily: "var(--font-sans)", fontSize: "10px", color: c.fg, opacity: 0.5 }}>{c.label}</span>
-                  </div>
-                ))}
-                {DEMO_CARDS.filter(c => c.type === "divider").map((c, i) => (
-                  <div key={i} style={{
-                    width: c.w, height: c.h,
-                    background: c.bg,
-                    borderRadius: "2px",
-                    margin: "2px 0",
-                  }} />
-                ))}
+                {/* Tip box */}
+                <div style={{
+                  width: "100%", height: 56,
+                  background: "#f0f3f8",
+                  borderRadius: "5px",
+                  border: "1px solid #c8d4e8",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <span style={{ fontFamily: "var(--font-sans)", fontSize: "10px", color: "#1a2d6e", opacity: 0.5 }}>提示框</span>
+                </div>
+                {/* Dividers */}
+                <div style={{ width: "100%", height: 2, background: "#1a2d6e", borderRadius: "1px" }} />
+                <div style={{ width: "60%", height: 2, background: "#c8d4e8", borderRadius: "1px" }} />
+                {/* Decorations */}
                 <div style={{ display: "flex", gap: "8px", justifyContent: "center", paddingTop: "4px" }}>
-                  {DEMO_CARDS.filter(c => c.type === "decoration").map((c, i) => (
+                  {["#1a2d6e", "#c8d4e8", "#f5f5f5"].map((bg, i) => (
                     <div key={i} style={{
-                      width: c.w, height: c.h,
-                      background: c.bg,
+                      width: 40, height: 40,
+                      background: bg,
                       borderRadius: "50%",
-                      border: c.border ? `1.5px solid ${c.border}` : "none",
+                      border: bg === "#f5f5f5" ? "1.5px solid #c8d4e8" : "none",
                     }} />
                   ))}
                 </div>
@@ -941,10 +959,10 @@ export default function Home() {
 
           {/* CTA */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ textAlign: "center", marginTop: "52px" }}
+            style={{ textAlign: "center", marginTop: "56px" }}
           >
             <button
               onClick={scrollToWork}
@@ -957,17 +975,14 @@ export default function Home() {
                 border: "none",
                 padding: "14px 32px",
                 borderRadius: "100px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                boxShadow: "0 2px 0 rgba(0,0,0,0.15)",
+                cursor: "pointer",
+                boxShadow: "0 2px 0 rgba(0,0,0,0.14)",
                 transition: "background 0.2s",
               }}
-              onMouseEnter={e => { (e.currentTarget.style.background = "#E8441A"); }}
-              onMouseLeave={e => { (e.currentTarget.style.background = "#111"); }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#E8441A"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#111"; }}
             >
-              <Upload size={16} />
-              立即上传参考图，生成属于你的素材包
+              立即上传参考图
             </button>
           </motion.div>
         </div>
@@ -978,7 +993,7 @@ export default function Home() {
         <AnimatePresence>
           {showWork && (
             <motion.div
-              initial={{ opacity: 0, y: 32 }}
+              initial={{ opacity: 0, y: 28 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
@@ -988,9 +1003,9 @@ export default function Home() {
         </AnimatePresence>
         {!showWork && (
           <div style={{
-            padding: "80px 24px",
+            padding: "100px 24px",
             textAlign: "center",
-            borderTop: "1px solid rgba(0,0,0,0.06)",
+            borderTop: "1px solid rgba(0,0,0,0.05)",
           }}>
             <button
               onClick={scrollToWork}
@@ -1003,29 +1018,23 @@ export default function Home() {
                 border: "none",
                 padding: "16px 36px",
                 borderRadius: "100px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "10px",
-                boxShadow: "0 2px 0 rgba(0,0,0,0.15)",
+                cursor: "pointer",
+                boxShadow: "0 2px 0 rgba(0,0,0,0.14)",
                 transition: "background 0.2s",
               }}
-              onMouseEnter={e => { (e.currentTarget.style.background = "#E8441A"); }}
-              onMouseLeave={e => { (e.currentTarget.style.background = "#111"); }}
+              onMouseEnter={e => { e.currentTarget.style.background = "#E8441A"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "#111"; }}
             >
-              <Upload size={18} />
               开始上传参考图
             </button>
-            <p style={{ fontFamily: "var(--font-sans)", fontSize: "13px", color: "#aaa", marginTop: "12px" }}>
-              点击后工作区将在下方展开
-            </p>
           </div>
         )}
       </div>
 
       {/* ─── FOOTER ───────────────────────────────────────────────────────── */}
       <footer style={{
-        padding: "40px 24px",
-        borderTop: "1px solid rgba(0,0,0,0.06)",
+        padding: "48px 24px",
+        borderTop: "1px solid rgba(0,0,0,0.05)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
@@ -1048,8 +1057,8 @@ export default function Home() {
         </div>
         <p style={{
           fontFamily: "var(--font-sans)",
-          fontSize: "13px",
-          color: "#aaa",
+          fontSize: "12px",
+          color: "#bbb",
           margin: 0,
         }}>
           上传参考图，AI 帮你生成一套能直接用于公众号排版的同风格素材
@@ -1059,17 +1068,17 @@ export default function Home() {
   );
 }
 
-// ─── Goose Logo (small, for nav/footer) ────────────────────────────────────
+// ─── Goose Logo (small, for nav/footer) ──────────────────────────────────────
 
 function GooseLogoSmall() {
   return (
-    <svg width="24" height="24" viewBox="0 0 28 28" fill="none" aria-label="素材鹅">
-      <ellipse cx="14" cy="18" rx="7" ry="5.5" fill="#fff" stroke="#111" strokeWidth="1.5" />
-      <path d="M 14 13 Q 16 10 14.5 7" stroke="#fff" strokeWidth="4" strokeLinecap="round" fill="none" />
-      <path d="M 14 13 Q 16 10 14.5 7" stroke="#111" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      <ellipse cx="14.5" cy="5.5" rx="3.5" ry="3" fill="#fff" stroke="#111" strokeWidth="1.5" />
-      <circle cx="16" cy="4.5" r="0.9" fill="#111" />
-      <path d="M 17.5 5.5 L 20.5 5.5 L 17.5 6.8" fill="#E8441A" stroke="#111" strokeWidth="0.5" />
+    <svg width="22" height="22" viewBox="0 0 28 28" fill="none" aria-label="素材鹅">
+      <ellipse cx="14" cy="18" rx="7" ry="5.5" fill="#fff" stroke="#333" strokeWidth="1.4" />
+      <path d="M 14 13 Q 16 10 14.5 7" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" fill="none" />
+      <path d="M 14 13 Q 16 10 14.5 7" stroke="#333" strokeWidth="1.4" strokeLinecap="round" fill="none" />
+      <ellipse cx="14.5" cy="5.5" rx="3.5" ry="3" fill="#fff" stroke="#333" strokeWidth="1.4" />
+      <circle cx="16" cy="4.5" r="0.8" fill="#333" />
+      <path d="M 17.5 5.5 L 20.5 5.5 L 17.5 6.8" fill="#E8441A" stroke="#E8441A" strokeWidth="0.4" />
       <line x1="11" y1="23" x2="9" y2="26" stroke="#E8441A" strokeWidth="1.5" strokeLinecap="round" />
       <line x1="17" y1="23" x2="19" y2="26" stroke="#E8441A" strokeWidth="1.5" strokeLinecap="round" />
     </svg>
