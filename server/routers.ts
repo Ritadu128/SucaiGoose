@@ -76,12 +76,14 @@ CRITICAL RULES — strictly follow all of these:
 
   const typeGuides: Record<string, string> = {
     main_title:
-      `A wide horizontal banner background for a WeChat article main title. ` +
-      `Collage-style or paper-cut color block aesthetic. ` +
-      `Aspect ratio approximately 4:1 or 3:1. ` +
-      `The center must be a large blank white or near-white area — no text, no shapes in the center. ` +
-      `Decorative elements (torn paper edges, color blocks, subtle texture) only at the edges or corners. ` +
-      `Feels like a designer's scrapbook background tile.`,
+      `A compact collage-style title label strip for a WeChat article main title. ` +
+      `CRITICAL SIZE RULE: this must be a small, compact title strip — NOT a large wide banner. ` +
+      `It should feel like a scrapbook label or a torn-paper title tag that can be placed on a layout. ` +
+      `Aspect ratio approximately 3:1 or 4:1, but overall size should be modest and compact. ` +
+      `Collage / paper-cut / color-block aesthetic: torn edges, layered paper scraps, color patches. ` +
+      `Decorative collage elements (stickers, tape, color blocks) only at the left and right ends. ` +
+      `The center strip must be a clean blank white or near-white area — no text, no shapes inside. ` +
+      `Only slightly larger than the subtitle strip. Think of it as: a compact title label, only slightly larger than a subtitle strip, not a large wide banner.`,
 
     sub_title:
       `A narrow horizontal banner background for a WeChat article section subtitle. ` +
@@ -91,14 +93,14 @@ CRITICAL RULES — strictly follow all of these:
       `Center must be blank white space. Decorative accents only at the far left or right edges.`,
 
     tip_box:
-      `A horizontal rectangular text panel background for body copy in a WeChat article. ` +
-      `CRITICAL SHAPE RULE: the canvas must be a wide horizontal rectangle — clearly wider than tall. ` +
-      `Aspect ratio must be 4:3, 3:2, or 16:10 — NEVER square, NEVER portrait orientation. ` +
+      `A vertical rectangular text panel background for body copy in a WeChat article. ` +
+      `CRITICAL SHAPE RULE: the canvas must be a tall vertical rectangle — clearly taller than wide. ` +
+      `Aspect ratio must be approximately 9:16 (portrait orientation) — NEVER square, NEVER landscape/horizontal. ` +
       `Solid color, semi-transparent, or very light tinted background. ` +
       `Subtle texture allowed: folded-paper grain, tiny dot pattern, or soft linen texture — nothing distracting. ` +
       `The entire interior center area must be a large blank clean space — no text, no icons, no decorative shapes inside. ` +
-      `A thin border or very soft shadow at the edges is acceptable. Prioritize readability. ` +
-      `Think of it as: a horizontal rectangular text panel, clearly wider than tall, with a large clean center area for text overlay, not square.`,
+      `A thin border or very soft shadow at the edges is acceptable. Prioritize readability and low visual noise. ` +
+      `Think of it as: a vertical rectangular text panel, portrait orientation, roughly 9:16 ratio, clearly taller than wide, with a large clean blank center for text overlay.`,
 
     divider:
       `Two horizontal divider line assets on a white background, arranged vertically in the image. ` +
@@ -108,13 +110,14 @@ CRITICAL RULES — strictly follow all of these:
       `Lines should be thin, elegant, and minimal. No text anywhere.`,
 
     decoration:
-      `A standalone decorative sticker element for WeChat article layout. ` +
-      `CRITICAL: this is NOT a frame, NOT a blank-centered layout, NOT a text box. ` +
-      `It must have a complete solid subject filling the element — for example: a heart, a star, a small flower, a tiny animal, an arrow, a decorative patch, or a graphic composition. ` +
-      `Do NOT leave an empty area in the center. Do NOT make a ring or border shape with nothing inside. ` +
-      `The subject should fill the element like a sticker or illustration — solid, complete, visually satisfying. ` +
-      `Near-square aspect ratio. White or transparent background. No text or letters of any kind. ` +
-      `Think of it as: a standalone decorative sticker with a complete subject, not a frame, no blank center, no empty area reserved for text.`,
+      `A standalone decorative object or sticker element for WeChat article collage layout. ` +
+      `CRITICAL: this must look like a real physical object or craft sticker — NOT a frame, NOT a blank-centered layout, NOT a text box. ` +
+      `Examples of what to generate: a pushpin, a button, a fabric star patch, a denim heart, a gingham bow, a washi tape strip, a small flower patch, a ribbon, a paper clip, a small tag, a star sticker, or similar craft/stationery objects. ` +
+      `The object should be rendered with tactile texture — fabric, denim, paper, plastic, enamel — like a real scrapbook embellishment. ` +
+      `DO NOT leave an empty area in the center. DO NOT make a ring or border shape with nothing inside. ` +
+      `The subject must fill the canvas completely — solid, complete, three-dimensional or illustrated. ` +
+      `Near-square aspect ratio. White or transparent background. Absolutely no text or letters. ` +
+      `Think of it as: a decorative scrapbook embellishment — pushpin, fabric patch, bow, button, washi tape — a standalone object, not a frame, no blank center.`,
   };
 
   return `${typeGuides[type] || label}${STRICT_RULES}`;
