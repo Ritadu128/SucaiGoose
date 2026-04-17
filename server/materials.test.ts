@@ -261,10 +261,10 @@ describe("materials.generateMaterials", () => {
     expect(result.materials.length).toBe(11);
   });
 
-  it("continues generating even when one image generation fails", async () => {
+  it("retries failed image generation and recovers all materials", async () => {
     const { generateImage } = await import("./_core/imageGeneration");
     const mockGen = vi.mocked(generateImage);
-    // Fail first 2, succeed rest
+    // First 2 calls fail (attempt 1 for items 1 & 2), retry succeeds for all
     mockGen
       .mockRejectedValueOnce(new Error("rate limit"))
       .mockRejectedValueOnce(new Error("rate limit"))
@@ -284,8 +284,8 @@ describe("materials.generateMaterials", () => {
       },
     });
 
-    // Should have 9 successful results (11 - 2 failures)
-    expect(result.materials.length).toBe(9);
+    // Retry logic recovers the 2 failed items, so all 11 materials should succeed
+    expect(result.materials.length).toBe(11);
   });
 
   it("marks generation as done after completion", async () => {

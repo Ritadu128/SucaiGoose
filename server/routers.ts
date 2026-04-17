@@ -251,14 +251,18 @@ export const appRouter = router({
 
         // Generate images in parallel batches of 3 to balance speed and rate limits
         const BATCH_SIZE = 3;
+        const MAX_RETRIES = 2;
         const results: Array<{ type: string; label: string; imageUrl: string; prompt: string }> = [];
 
-        for (let batchStart = 0; batchStart < tasks.length; batchStart += BATCH_SIZE) {
-          const batch = tasks.slice(batchStart, batchStart + BATCH_SIZE);
-          const batchResults = await Promise.allSettled(
-            batch.map(async (task, batchIdx) => {
-              const sortOrder = batchStart + batchIdx;
-              const prompt = buildMaterialPrompt(task.type, task.label, task.index, analysis);
+        // Helper: generate a single material with automatic retry
+        const generateWithRetry = async (
+          task: { type: typeof MATERIAL_PLAN[number]["type"]; label: string; index: number },
+          sortOrder: number
+        ): Promise<{ type: string; label: string; imageUrl: string; prompt: string }> => {
+          const prompt = buildMaterialPrompt(task.type, task.label, task.index, analysis);
+          let lastError: unknown;
+          for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            try {
               const genResult = await generateImage({ prompt });
               const url: string = genResult.url ?? "";
               await createMaterial({
@@ -270,13 +274,27 @@ export const appRouter = router({
                 sortOrder,
               });
               return { type: task.type as string, label: `${task.label} ${task.index + 1}`, imageUrl: url, prompt };
-            })
+            } catch (err) {
+              lastError = err;
+              if (attempt < MAX_RETRIES) {
+                console.warn(`[generateMaterials] Attempt ${attempt + 1} failed for ${task.label} ${task.index + 1}, retrying...`);
+                await new Promise(res => setTimeout(res, 1500 * (attempt + 1)));
+              }
+            }
+          }
+          throw lastError;
+        };
+
+        for (let batchStart = 0; batchStart < tasks.length; batchStart += BATCH_SIZE) {
+          const batch = tasks.slice(batchStart, batchStart + BATCH_SIZE);
+          const batchResults = await Promise.allSettled(
+            batch.map((task, batchIdx) => generateWithRetry(task, batchStart + batchIdx))
           );
           for (const r of batchResults) {
             if (r.status === "fulfilled") {
               results.push(r.value);
             } else {
-              console.error(`[generateMaterials] Batch item failed:`, r.reason);
+              console.error(`[generateMaterials] Batch item failed after ${MAX_RETRIES} retries:`, r.reason);
             }
           }
         }
