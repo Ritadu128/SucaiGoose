@@ -86,7 +86,7 @@
 - [x] 实现走路动效：左右腿交替前后摆动（CSS keyframes），逃跑时动效加快
 
 ## 素材生成逻辑优化 v6
-- [x] 前端“提示框”改名为“文字框”（服务端 MATERIAL_PLAN label 已更新，前端动态读取自动生效）
+- [x] 前端"提示框"改名为"文字框"（服务端 MATERIAL_PLAN label 已更新，前端动态读取自动生效）
 - [x] 重写 server/routers.ts 中各类素材的生成 prompt，严格遵守留白规则
 - [x] 主标题框：拼贴感/色块感/纸片感留白背景，不放字
 - [x] 小标题框：同风格但更窄更短更低调，中间留白
@@ -105,3 +105,6 @@
 
 ## 素材生成重试逻辑
 - [x] generateMaterials 批量生成中，单张失败时自动重试最多 2 次，避免因偶发 500 错误导致素材数量不足
+
+## Bug 修复：generations INSERT 失败
+- [x] 修复 insert into generations 失败：改用 mysql2 createPool 连接池（enableKeepAlive + connectionLimit:5），解决长时间空闲后连接断开导致 INSERT 超时失败的问题

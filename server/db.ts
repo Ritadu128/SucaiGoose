@@ -1,20 +1,41 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { createPool } from "mysql2/promise";
 import { InsertUser, users, generations, materials, InsertGeneration, InsertMaterial } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _pool: any = null;
 let _db: ReturnType<typeof drizzle> | null = null;
 
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
-    }
+function getPool() {
+  if (!_pool && process.env.DATABASE_URL) {
+    _pool = createPool({
+      uri: process.env.DATABASE_URL,
+      connectionLimit: 5,
+      waitForConnections: true,
+      queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 10000,
+      multipleStatements: false,
+    });
   }
-  return _db;
+  return _pool;
+}
+
+export async function getDb() {
+  if (!process.env.DATABASE_URL) return null;
+  try {
+    if (!_db) {
+      _db = drizzle(getPool());
+    }
+    return _db;
+  } catch (error) {
+    console.warn("[Database] Failed to initialize:", error);
+    _db = null;
+    _pool = null;
+    return null;
+  }
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
